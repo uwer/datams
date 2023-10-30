@@ -1,6 +1,6 @@
 # datams
 
-## Installation (Ubuntu IOS)
+## Installation (Ubuntu OS)
 
 ---
 *NOTE:*
@@ -126,7 +126,7 @@ If this is not the correct location then it can be found using
   sudo chmod -R o-rwx /usr/local/src/datams/
   sudo mkdir -p /var/lib/datams/uploads/submitted
   sudo mkdir -p /var/lib/datams/uploads/pending
-  sudo chmod -R 770 /var/datams
+  sudo chmod -R 770 /var/lib/datams
 ```
 
 ### 16. start services and check their status to ensure they started correctly
@@ -162,6 +162,7 @@ If this is not the correct location then it can be found using
    - catch database errors in view methods that call them and flash these to the user.  
    - cronjob to dump database daily in-case of catastrophic loss
    - implement logging in flask application
+   - add functionality to add/remove files from organization, deployment, and mooring edit views.  
    - have failed transactions rollback by executing them all in a block instead of separately
    - a set of tests suite
    - Fix the error involving letter case of uploads filenames (could force lowercase)
