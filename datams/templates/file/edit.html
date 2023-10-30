@@ -1,0 +1,103 @@
+{% set title = (data['file']['filename'], '(' + data['file']['level'] + ')', None) %}
+{% set button = {'id': 'fileDeleteButton', 'class': 'btn btn-danger btn-md', 'label': 'DELETE FILE', 'target': 'fileDeleteModal', 'modal_target': True} %}
+{% extends "main.html" %}
+
+{% block title %}
+    {{ title[0] }} Edit
+{% endblock %}
+
+{% block content %}
+<form class="row g-3" method="POST" enctype="multipart/form-data" action="{{ url_for('file.edit', fid=data['file']['id']) }}">
+  <div class="col-md-6">
+    <label for="level" class="form-label">Level</label>
+    <select name="level" id="level" class="form-select" required onchange="levelChanged()">
+    <option value="" selected disabled hidden>Choose...</option>
+    {% for i in data['all_levels']%}
+      <option value="{{ i }}" {% if i.replace('_', ' ').title() == data['file']['level'] %} selected {% endif %}>{{ i.replace('_', ' ').title() }}</option>
+    {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-6">
+    <label for="description" class="form-label">Description</label>
+    <select name="description" id="description" class="form-select" required>
+      <option value="" selected disabled hidden>Choose...</option>
+      {% for i in data['all_descriptions']%}
+      <option value="{{ i }}" {% if i == data['file']['description'] %} selected {% endif %}>{{ i }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-12 {% if data['file']['level'] == 'Unowned' %}d-none{% endif %}">
+    <label for="organization_id" class="form-label">Organization</label>
+    <select name="organization_id" id="organization_id" class="form-select" {% if data['file']['level'] != 'Unowned' %} required {% endif %} onchange="organizationChanged()">
+      <option value="" selected disabled hidden>Choose...</option>
+      {% for _, i in data['all_organizations'].iterrows()%}
+      <option value="{{ i['id']|int }}" {% if i['id'] == data['file']['organization_id'] %} selected {% endif %}>{{ i['name'] }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-12 {% if data['file']['level'] == 'Organization' or data['file']['level'] == 'Unowned' %}d-none{% endif %}">
+    <label for="deployment_id" class="form-label">Deployment</label>
+    <select name="deployment_id" id="deployment_id" class="form-select" {% if data['file']['level'] == 'Deployment' or data['file']['level'] == 'Mooring Equipment' %} required {% endif %} onchange="deploymentChanged()">
+      <option value="" selected disabled hidden>Choose...</option>
+      {% if data['file']['level'] != 'Organization' %}
+      {% for _, i in data['all_deployments'].iterrows()%}
+      {% if data['file']['organization_id'] in i['oids'] %}
+      <option value="{{ i['id']|int }}" {% if i['id'] == data['file']['deployment_id'] %} selected {% endif %}>{{ i['name'] }}</option>
+      {% endif %}
+      {% endfor %}
+      {% endif %}
+    </select>
+  </div>
+  <div class="col-md-12 {% if data['file']['level'] != 'Mooring Equipment' %}d-none{% endif %}">
+    <label for="mooring_id" class="form-label">Mooring</label>
+    <select name="mooring_id" id="mooring_id" class="form-select" {% if data['file']['level'] == 'Mooring Equipment' %} required {% endif %} onchange="mooringChanged()">
+      <option value="" selected disabled hidden>Choose...</option>
+      {% if data['file']['level'] == 'Mooring Equipment' %}
+      {% for _, i in data['all_moorings'].iterrows()%}
+      {% if data['file']['deployment_id'] == i['did'] %}
+      <option value="{{ i['id']|int }}" {% if i['id'] == data['file']['mooring_id'] %} selected {% endif %}>
+      (Lat: {{ i['latitude'] }}, Lon: {{ i['longitude'] }})</option>
+      {% endif %}
+      {% endfor %}
+      {% endif %}
+    </select>
+  </div>
+  <div class="col-md-12 {% if data['file']['level'] != 'Mooring Equipment' %}d-none{% endif %}">
+    <label for="equipment_id" class="form-label">Equipment</label>
+    <select name="equipment_id" id="equipment_id" {% if data['file']['level'] == 'Mooring Equipment' %} required {% endif %} class="form-select">
+      <option value="" selected disabled hidden>Choose...</option>
+      {% if data['file']['level'] == 'Mooring Equipment' %}
+      {% for _, i in data['all_equipment'].iterrows()%}
+      {% if data['file']['mooring_id'] in i['mids'] %}
+      <option value="{{ i['id'] }}" {% if i['id'] == data['file']['equipment_id'] %} selected {% endif %}>
+      {{ i['item'] }} [SN: {{ i['serial_number'] }}]</option>
+      {% endif %}
+      {% endfor %}
+      {% endif %}
+    </select>
+  </div>
+  <div class="col-md-12">
+    <label for="comments" class="form-label">Comments</label>
+    <input type="textarea" class="form-control" name="comments" id="comments" value="{{ data['file']['comments'] }}">
+  </div>
+  <div class="col-md-2">
+    <button type="submit" class="btn btn-primary">Submit</button>
+  </div>
+  <div class="col-md-2">
+    <button type="button" class="btn btn-secondary" onclick="window.location.href='{{ request.referrer }}'">Cancel</button>
+  </div>
+</form>
+{{ components.modal('fileDeleteModal', 'Delete File', file.delete()) }}
+{% endblock %}
+{% block scripts %}
+{{ scripts.set_form_options() }}
+<script>
+
+{# function setFileValues() {
+  let level = document.getElementById('level');
+  let event = new Event('change');
+  level.dispatchEvent(event);
+}
+setFileValues()#}
+</script>
+{% endblock %}

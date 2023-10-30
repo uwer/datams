@@ -1,0 +1,20 @@
+{% set title = ('Contacts', None, None)%}
+{% set button = {'id': 'contactAddButton', 'class': 'btn btn-success btn-md bannerbtn', 'label': 'ADD CONTACT', 'target': 'contactAddModal', 'modal_target': True} %}
+
+{% extends "root.html" %}
+
+{% block title %}
+    {{ title[0] }}
+{% endblock %}
+
+{% block table %}
+    {{ components.table('contactsTable', data['contacts']) }}
+{% endblock %}
+
+{% block modal %}
+    {{ components.modal('contactAddModal', 'Add Contact', contact.add()) }}
+{% endblock %}
+
+{% block scripts %}
+    {{ scripts.format_table('contactsTable') }}
+{% endblock %}

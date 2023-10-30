@@ -1,0 +1,52 @@
+{#
+Parameters
+----------
+`id`      [required] str          : table id should start with a alphabetically character so usage in script doesn't fail
+`df`      [required] pd.DataFrame : containing the table data
+`columns` [optional] List[str]    : a subset of columns in df to display, if not provided then all columns will be displayed
+`numrows` [optional] int          : a subset of rows to display, if not provided then all rows will be displayed
+
+NOTE: If url is provided this is always put at the end.  
+#}
+
+{% import '/components/__init__.html' as components with context %}
+
+{% if columns is none %}
+{% set columns = df.columns %}
+{% endif %}
+
+{% if numrows is not none %}
+{% set df = df.iloc[0:numrows] %}
+{% endif %}
+
+{{ components.loader( id + '_loader') }}
+<table id="{{ id }}" class="table table-striped table-bordered w-100 d-none">
+  <thead>
+    <tr>
+    {% for column in columns %}
+      {% if column != 'url' %}
+      <th>{{ column.replace('_', ' ').title() }}</th>
+      {% endif %}
+      {% endfor %}
+      {% if 'url' in columns %}
+      <th>url</th>
+      {% endif %}
+    </tr>
+  </thead>
+  <tbody>
+  {% for _, row in df.iterrows() %}
+    <tr>
+    {% for column in columns %}
+    {% if column != 'url' %}
+      {% if not pd.isna(row[column]) %}
+      <td>{{ row[column] }}</td>
+      {% else %}
+      <td></td>
+      {% endif %}
+    {% endif %}
+    {% endfor %}
+    {% if 'url' in columns %}<td>{{ row['url'] }}</td>{% endif %}
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>

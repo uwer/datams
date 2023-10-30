@@ -1,0 +1,21 @@
+{% set title = ('Deployments', None, None)%}
+{% set button = {'id': 'deploymentAddButton', 'class': 'btn btn-success btn-md', 'label': 'ADD DEPLOYMENT', 'target': 'deploymentAddModal', 'modal_target': True} %}
+
+{% extends "root.html" %}
+
+{% block title %}
+    Deployments
+{% endblock %}
+
+{% block table %}
+    {{ components.table('deploymentsTable', data['deployments']) }}
+{% endblock %}
+
+{% block modal %}
+    {{ components.modal('deploymentAddModal', 'Add Deployment', deployment.add()) }}
+{% endblock %}
+
+{% block scripts %}
+    {{ scripts.format_table('deploymentsTable') }}
+    {{ scripts.set_form_options() }}
+{% endblock %}

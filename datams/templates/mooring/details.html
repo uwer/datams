@@ -1,0 +1,34 @@
+{% set title = ('(Lat:' + data['mooring']['latitude']|string + ', Lon:' + data['mooring']['longitude']|string + ') -- ' + data['mooring']['deployed']|string + ' to ' + data['mooring']['recovered']|string, None, None) %}
+{% set button = {'id': 'mooringEditButton', 'class': 'btn btn-warning btn-md', 'label': 'EDIT MOORING', 'target': url_for('mooring.edit', mid=data['mooring']['id']), 'modal_target': False} %}
+{% set summary_keys = ['deployed', 'recovered', 'latitude', 'longitude', 'seafloor_depth', 'line_length'] %}
+
+{% extends "main.html" %}
+
+{% block title %}
+    {{ title[0] }}
+{% endblock %}
+
+{% block content %}
+    {{ components.summary('mooringSummary', data['mooring'], summary_keys) }}
+    
+    <h2>Deployments</h2>
+    {{ components.table('deploymentsTable', data['deployment']) }} 
+    
+    <h2>Equipment</h2>
+    {{ components.table('equipmentsTable', data['equipment']) }} 
+    
+    <h2>Organizations</h2>
+    {{ components.table('organizationsTable', data['organizations']) }}
+    
+    <h2>Files</h2>
+    {{ components.table('mfilesTable', data['mfiles']) }} 
+    
+    {{ components.modal('mooringDeleteModal', 'Delete Mooring', mooring.delete()) }}
+{% endblock %}
+
+{% block scripts %}
+    {{ scripts.format_table('deploymentsTable') }}
+    {{ scripts.format_table('equipmentsTable') }}
+    {{ scripts.format_table('organizationsTable') }}
+    {{ scripts.format_table('mfilesTable') }}
+{% endblock %}

@@ -1,0 +1,77 @@
+{% set title = (data['equipment']['item'] + ' [' + data['equipment']['serial_number'] + ']', None, None) %}
+{% set button = {'id': 'equipmentDeleteButton', 'class': 'btn btn-danger btn-md', 'label': 'DELETE EQUIPMENT', 'target': 'equipmentDeleteModal', 'modal_target': True} %}
+
+{% extends "main.html" %}
+
+{% block title %}
+    {{ title[0] }} Edit
+{% endblock %}
+
+{% block content %}
+<form class="row g-3" method="POST" action="{{ url_for('equipment.edit', eid=data['equipment']['id']) }}">
+  <h2>General</h2>
+  <div class="col-md-4">
+    <label for="serial_number" class="form-label">Serial Number</label>
+    <input type="text" class="form-control" name="serial_number" id="serial_number" required="True" value="{{ data['equipment']['serial_number'] }}">
+  </div>
+  <div class="col-md-4">
+    <label for="make" class="form-label">Make</label>
+    <input type="text" class="form-control" name="make" id="make" required="True" value="{{ data['equipment']['make'] }}">
+  </div>
+  <div class="col-md-4">
+    <label for="model" class="form-label">Model</label>
+    <input type="text" class="form-control" name="model" id="model" required="True" value="{{ data['equipment']['model'] }}">
+  </div>
+  <div class="col-md-6">
+    <label for="item" class="form-label">Item</label>
+    <select name="item" id="item" class="form-select" required="True">
+    <option value="" selected disabled hidden>Choose...</option>
+    {% for d in data['all_items'] %}
+      <option value="{{ d }}" {% if d == data['equipment']['item'] %}selected{% endif %}>{{ d }}</option>
+    {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-6">
+    <label for="status" class="form-label">Status</label>
+    <select name="status" id="status" class="form-select" required="True">
+    <option value="" selected disabled hidden>Choose...</option>
+    {% for d in data['all_status'] %}
+      <option value="{{ d }}" {% if d == data['equipment']['status'] %}selected{% endif %}>{{ d }}</option>
+    {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-12">
+    <label for="organization_id" class="form-label">Owner</label>
+    <select name="organization_id" id="organization_id" class="form-select" required="True">
+    <option value="" selected disabled hidden>Choose...</option>
+    {% for _, d in data['all_organizations'].iterrows() %}
+      <option value="{{ d['id'] }}" {% if d['id'] == data['equipment']['organization_id'] %}selected{% endif %}>{{ d['name'] }}</option>
+    {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-12">
+    <label for="comments" class="form-label">Comments</label>
+    <input type="textarea" class="form-control" name="comments" id="comments" value="{{ data['equipment']['comments'] }}">
+  </div>
+  {#
+  <hr>
+  <h2>Deployments</h2>
+  {% for idx, r in data['all_deployments'].sort_values(by='date').iterrows() %}
+  <div class="col-md-2">
+    <input class="form-check-input" type="checkbox" value={{ r['id'] }} name="deployment{{ r['id'] }}" id="deployment{{ r['id'] }}" {% if r['id'] in data['deployments']['id'].unique() %}checked{% endif %}>
+    <label class="form-check-label" for="deployment{{ r['id'] }}">
+      {{ r['date'] }}</br>{{ r['region'] }}</br>{{ r['organizations'] }}
+    </label>
+  </div>
+  {% endfor %}
+  <hr>
+  #}
+  <div class="col-md-2">
+    <button type="submit" class="btn btn-primary">Submit</button>
+  </div>
+  <div class="col-md-2">
+    <button type="button" class="btn btn-secondary" onclick="window.location.href='{{ request.referrer }}'">Cancel</button>
+  </div>
+</form>
+{{ components.modal('equipmentDeleteModal', 'Delete Equipment', equipment.delete()) }}
+{% endblock %}

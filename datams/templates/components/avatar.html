@@ -1,0 +1,13 @@
+{#
+Parameters
+----------
+`id`    [required] str:   This is the identifier for the component
+`data`  [optional] str:   This is a base64 encoded string that if provided is put directly into the image otherwise the default
+                          avatar is used.  
+#}
+
+{% if pd.isna(data) or data == '' %}
+<img id={{ id }} src="{{ url_for('static', filename='/images/generic_avatar.png') }}" alt="...">
+{% else %}
+<img id={{ id }} src="data:image/png;base64, {{ data }}" alt="...">
+{% endif %}

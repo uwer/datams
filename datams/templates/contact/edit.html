@@ -1,0 +1,94 @@
+{% set title = (data['contact']['name'], None, None) %}
+{% set button = {'id': 'contactDeleteButton', 'class': 'btn btn-danger btn-md', 'label': 'DELETE CONTACT', 'target': 'contactDeleteModal', 'modal_target': True} %}
+
+{% extends "main.html" %}
+
+{% block title %}
+    {{ title[0] }} Edit
+{% endblock %}
+
+{% block content %}
+<form class="row g-3" method="POST" enctype="multipart/form-data" action="{{ url_for('contact.edit', cid=data['contact']['id']) }}">
+  <h2>General</h2>
+  <div class="col-md-12">
+    <div class='d-block'>
+      {{ components.avatar('contactAvatar', data['contact']['avatar']) }}
+    </div>
+    <label for="avatar" class="form-label">Profile Picture</label>
+    <input type="file" id="avatar" name="avatar" accept="image/png, image/jpeg" onchange="readURL(this);">
+  </div>
+  <div class="col-md-6">
+    <label for="first_name" class="form-label">First Name</label>
+    <input type="text" class="form-control" name="first_name" id="first_name" required value="{{ data['contact']['first_name'] }}">
+  </div>
+  <div class="col-md-6">
+    <label for="last_name" class="form-label">Last Name</label>
+    <input type="text" class="form-control" name="last_name" id="last_name" required value="{{ data['contact']['last_name'] }}">
+  </div>
+  <div class="col-md-8">
+    <label for="organization_id" class="form-label">Organization</label>
+    <select name="organization_id" id="organization_id" class="form-select" required>
+      <option value="" selected disabled hidden>Choose...</option>
+    {% for _, i in data['all_organizations'].iterrows()%}
+      <option value="{{ i['id'] }}" {% if i['id'] == data['contact']['organization_id'] %}selected{% endif %}>{{ i['name'] }}</option>
+    {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-4">
+    <label for="position" class="form-label">Position</label>
+    <select name="position" id="position" class="form-select" required>
+    <option value="" selected disabled hidden>Choose...</option>
+    {% for i in data['all_positions']%}
+      <option value="{{ i }}" {% if i == data['contact']['position'] %}selected{% endif %}>{{ i }}</option>
+    {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-6">
+    <label for="email" class="form-label">Email</label>
+    <input type="email" class="form-control" name="email" id="email" required value="{{ data['contact']['email'] }}">
+  </div>
+  <div class="col-md-6">
+    <label for="phone" class="form-label">Phone</label>
+    <input type="tel" class="form-control" name="phone" id="phone" value="{{ data['contact']['phone'] }}">
+  </div>
+  <div class="col-md-12">
+    <label for="comments" class="form-label">Comments</label>
+    <input type="textarea" class="form-control" name="comments" id="comments" value="{{ data['contact']['comments'] }}">
+  </div>
+  <hr>
+  <h2>Assigned Deployments</h2>
+  {% for idx, r in data['all_deployments'].sort_values(by='date').iterrows() %}
+  <div class="col-md-2">
+    <input class="form-check-input" type="checkbox" value={{ r['id'] }} name="deployment{{ r['id'] }}" id="deployment{{ r['id'] }}" {% if r['id'] in data['deployments']['id'].unique() %}checked{% endif %}>
+    <label class="form-check-label" for="deployment{{ r['id'] }}">
+      <a href={{ url_for('deployment.details', did=r['id']) }} class="highlight">
+      {{ r['date'] }}</br>{{ r['region'] }}</br>{{ r['organizations'] }}
+      </a>
+    </label>
+  </div>
+  {% endfor %}
+  <hr>
+  <div class="col-md-2">
+    <button type="submit" class="btn btn-primary">Submit</button>
+  </div>
+  <div class="col-md-2">
+    <button type="button" class="btn btn-secondary" onclick="window.location.href='{{ request.referrer }}'">Cancel</button>
+  </div>
+</form>
+{{ components.modal('contactDeleteModal', 'Delete Contact', contact.delete()) }}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function readURL(input) {
+  if (input.files && input.files[0]) {
+    let reader = new FileReader();
+
+    reader.onload = function (e) {
+      $('#contactAvatar').attr('src', e.target.result).width(260).height(260);
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+</script>
+{% endblock %}

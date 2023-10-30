@@ -1,0 +1,55 @@
+<form class="row g-3" method="POST" action="{{ url_for('mooring.add') }}">
+  <div class="col-md-9">
+    <label for="deployment_id" class="form-label">Deployment</label>
+    <select name="deployment_id" id="deployment_id" class="form-select" required>
+    <option value="" selected disabled hidden>Choose...</option>
+    {% for _, d in data['all_deployments'].iterrows() %}
+      <option value="{{ d['id'] }}">{{ d['name'] }}</option>
+    {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3">
+    <label for="timezone" class="form-label">Time-Zone</label>
+    <select name="timezone" id="timezone" class="form-select" required>
+    <option value="" selected disabled hidden>Choose...</option>
+    {% for k, v in data['all_timezones'].items() %}
+      <option value="{{ v }}">{{ k }}</option>
+    {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-6">
+    <label for="deployed" class="form-label">Deployed</label>
+    <input type="datetime-local" class="form-control" name="deployed" id="deployed" required>
+  </div>
+  <div class="col-md-6">
+    <label for="recovered" class="form-label">Recovered</label>
+    <input type="datetime-local" class="form-control" name="recovered" id="recovered">
+  </div>
+  
+  <div class="col-md-3">
+    <label for="latitude" class="form-label">Latitude (d.dddd)</label>
+    <input type="number" step="0.0001" min="-90.0000", max="90.0000" class="form-control" name="latitude" id="latitude" required>
+  </div>
+  <div class="col-md-3">
+    <label for="longitude" class="form-label">Longitude (d.dddd)</label>
+    <input type="number" step="0.0001" min="-180.0000", max="180.0000" class="form-control" name="longitude" id="longitude" required>
+  </div>
+  <div class="col-md-3">
+    <label for="seafloor_depth" class="form-label">Ocean Depth (m)</label>
+    <input type="number" step="0.001" min="0.000", max="12000.000"class="form-control" name="seafloor_depth" id="seafloor_depth" required>
+  </div>
+  <div class="col-md-3">
+    <label for="line_length" class="form-label">Line Length (m)</label>
+    <input type="number" step="0.001" class="form-control" name="line_length" id="line_length" required>
+  </div>
+  <div class="col-md-12">
+    <label for="comments" class="form-label">Comments</label>
+    <input type="textarea" class="form-control" name="comments" id="comments">
+  </div>
+  <div class="col-md-2">
+    <button type="submit" class="btn btn-primary">Submit</button>
+  </div>
+  <div class="col-md-2">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+  </div>
+</form>

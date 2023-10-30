@@ -1,0 +1,130 @@
+#banner {
+  display: block;
+  height: 69px;
+}
+
+#bannerTitle {
+  display: inline;
+}
+
+#bannerSubtitle1 {
+  font-size: 18pt; 
+  letter-spacing: -1px; 
+  font-weight: normal; 
+  margin-left: 20px;
+}
+
+#bannerSubtitle2 {
+  font-size: 16pt; 
+  letter-spacing: -1px; 
+  margin-left: 20px; 
+  font-style: italic; 
+  background-color: rgb(240, 240, 240); 
+  font-weight: normal;
+}
+
+#bannerButton {
+  float: right;
+}
+
+#contents {
+  width: 95%;
+  margin-left: 2.5%;
+}
+
+.highlight {
+  color: black;
+}
+
+.highlight:hover {
+    /*background-color: whitesmoke !important;*/
+    background-color: rgb(60,60,60) !important;
+    color: rgb(245,245,245);
+    cursor: pointer;
+}
+
+td.highlight {
+    /*background-color: whitesmoke !important;*/
+    background-color: rgb(60,60,60) !important;
+    color: rgb(245,245,245);
+    cursor: pointer;
+}
+
+.mapMooringValue{
+  background-color: rgb(240,240,240);
+}
+
+.flex-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.accordion-button {
+	text-decoration: none; 
+	color: black; 
+  font-weight: bold;
+  font-size: 1.1em;
+}
+
+.section_contents {
+  background-color: rgb(245,245,245);
+  
+}
+
+.loader {
+    border: 12px solid #f3f3f3;
+    border-radius: 50%;
+    border-top: 12px solid #444444;
+    width: 70px;
+    height: 70px;
+    animation: spin 1s linear infinite;
+}
+.center {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    margin: auto;
+}
+
+@keyframes spin {
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+h1 {
+  font-size: 2em;
+}
+
+h2 {
+  font-size: 1.5em;
+}
+
+h3 {
+  font-size: 1.1em;
+}
+
+/*The following was from contact/details.css, but don't think it is needed anymore*/
+/*
+#content {
+  width: 100%;
+  height: 1686px;
+  background-image: url('/static/images/beach_background_30.png');
+  background-color: rgb(255,255,255);
+  background-size: cover;
+}
+
+#display_area {
+  width: 80%;
+  margin-left: 10%;
+}
+
+img .icon {
+  padding-left: 40px;
+}
+*/
+
+

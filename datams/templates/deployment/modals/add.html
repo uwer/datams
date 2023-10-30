@@ -1,0 +1,47 @@
+{#
+data: dictionary with columns 'all_organizations', 'all_countries'
+data['all_organizations']: pd.DataFrame with columns 'id', 'fullname'
+data['all_countries']:     pd.DataFrame with columns 'id', 'name'
+#}
+
+<form class="row g-3" method="POST" action="{{ url_for('deployment.add') }}">
+  <div class="col-md-12">
+    Organization(s)
+    <div class='d-inline-block ps-1'>
+      <img src="{{ url_for('static', filename='icons/plus.svg') }}" height=15 width=15 onclick="addOrganizationField()"/>
+    </div>
+    <div class='d-inline-block ps-1'>
+      <img src="{{ url_for('static', filename='icons/minus.svg') }}"height=15 width=15 onclick="removeOrganizationField()"/>
+    </div>
+    <select name="organization_id" id="organization_id" class="form-select" required onchange="updateOrganizationOptions()">
+    <option value="" selected disabled hidden>Choose...</option>
+    {% for _, i in data['all_organizations'].iterrows() %}
+      <option value="{{ i['id'] }}">{{ i['name'] }}</option>
+    {% endfor %}
+    </select>
+    <div id='additionalOrganizations'></div>
+  </div>
+  <div class="col-md-6">
+    <label for="region" class="form-label">Region</label>
+    <input type="text" class="form-control" name="region" id="region" required>
+  </div>
+  <div class="col-md-6">
+    <label for="country_id" class="form-label">Country</label>
+    <select name="country_id" id="country_id" class="form-select" required>
+    <option value="" selected disabled hidden>Choose...</option>
+    {% for _, c in data['all_countries'].iterrows()%}
+      <option value="{{ c['id'] }}">{{ c['name'] }}</option>
+    {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-12">
+    <label for="comments" class="form-label">Comments</label>
+    <input type="textarea" class="form-control" name="comments" id="comments">
+  </div>
+  <div class="col-md-2">
+    <button type="submit" class="btn btn-primary">Submit</button>
+  </div>
+  <div class="col-md-2">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+  </div>
+</form>

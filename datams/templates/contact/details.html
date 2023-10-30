@@ -1,0 +1,27 @@
+{% set title = (data['contact']['name'], None, None) %}
+{% set button =  {'id': 'contactEditButton', 'class': 'btn btn-warning btn-md', 'label': 'EDIT CONTACT', 'target': url_for('contact.edit', cid=data['contact']['id']), 'modal_target': False} %}
+{% set summary_keys = ['organization', 'position', 'phone', 'email', 'comments'] %}
+
+{% extends "main.html" %}
+
+{% block title %}
+  {{ title[0] }} Details
+{% endblock %}
+
+{% block content %}
+<div class='d-flex'>
+  <div class='d-inline-block float-start'>
+  {{ components.avatar('contactAvatar', data['contact']['avatar']) }}
+  </div>
+  <div class='d-inline-block float-start ps-3'>
+  {{ components.summary('contactSummary', data['contact'], summary_keys) }}
+  </div>
+</div>
+<hr>
+<h2>Assigned Deployments:</h2>
+{{ components.table('deploymentsTable', data['deployments']) }}
+{% endblock %}
+
+{% block scripts %}
+    {{ scripts.format_table('deploymentsTable', header=False) }}
+{% endblock %}

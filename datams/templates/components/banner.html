@@ -1,0 +1,26 @@
+{#
+Expected Variables
+  - title           # tuple[str, str, str]
+  - button          # dict {'id', 'class': str, 'onclick':str, 'label':str, 'target': str}
+  
+  Eventually assign id to banner button and use class to float right
+#}
+<div id="banner">
+  <h1 id="bannerTitle">{{ title[0] }}</h1>
+  
+  {% if title[1] %} <span id="bannerSubtitle1">{{ title[1] }}</span> {% endif %}
+  {% if title[2] %} <span id="bannerSubtitle2">[{{ title[2] }}]</span> {% endif %}
+  
+  {% if button %}
+  {% if button['modal_target'] %}
+  <button id="bannerButton" class={{ button['class']|tojson }} type="button" data-bs-toggle="modal" data-bs-target="#{{ button['target'] }}">
+    <b>{{ button['label'] }}</b>
+  </button>
+  {% else %}
+  <button id="bannerButton" class={{ button['class']|tojson }} type="button" onclick="window.location.href='{{ button['target'] }}'">
+    <b>{{ button['label'] }}</b>
+  </button>
+  {% endif %}
+  {% endif %}
+  <hr/>
+</div>

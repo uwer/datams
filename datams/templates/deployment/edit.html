@@ -1,0 +1,104 @@
+{% set title = (data['deployment']['location'] + " " + data['deployment']['date']|string, None, data['deployment']['organizations']) %}
+{% set button = {'id': 'deploymentDeleteButton', 'class': 'btn btn-danger btn-md', 'label': 'DELETE DEPLOYMENT', 'target': 'deploymentDeleteModal', 'modal_target': True} %}
+
+{% extends "main.html" %}
+
+{% block title %}
+    {{ title[0] }} Edit
+{% endblock %}
+
+{% block content %}
+<h2>General</h2>
+<form class="row g-3" method="POST" action="{{ url_for('deployment.edit', did=data['deployment']['id']) }}">
+  <div class="col-md-12">
+    Organization(s)
+    <div class='d-inline-block ps-1'>
+      <img src="{{ url_for('static', filename='icons/plus.svg') }}" height=15 width=15 onclick="addOrganizationField()"/>
+    </div>
+    <div class='d-inline-block ps-1'>
+      <img src="{{ url_for('static', filename='icons/minus.svg') }}"height=15 width=15 onclick="removeOrganizationField()"/>
+    </div>
+    <select name="organization_id" id="organization_id" class="form-select" required onchange="updateOrganizationOptions()">
+    <option value="" selected disabled hidden>Choose...</option>
+    {% for _, i in data['all_organizations'].iterrows() %}
+      <option value="{{ i['id'] }}" {% if i['id'] == data['deployment']['oids'][0]  %} selected {% endif %}>{{ i['name'] }}</option>
+    {% endfor %}
+    </select>
+    <div id='additionalOrganizations'>
+    {% if data['deployment']['oids']|length > 1 %}
+    {% for oid in data['deployment']['oids'][1:] %}
+    {% set outer_loop = loop %}
+    <select name="organization_id{{ loop.index0 }}" id="organization_id{{ loop.index0 }}" class="form-select" required onchange="updateOrgOptions()">
+    <option value="" selected disabled hidden>Choose...</option>
+    {% for _, i in data['all_organizations'].iterrows() %}
+      {% if i['id'] not in data['deployment']['oids'][:outer_loop.index] %}
+      <option value="{{ i['id'] }}" {% if i['id'] == data['deployment']['oids'][outer_loop.index]  %} selected {% endif %}>{{ i['name'] }}</option>
+      {% endif %}
+    {% endfor %}
+    </select>
+    {% endfor %}
+    {% endif %}
+    </div>
+  </div>
+  <div class="col-md-6">
+    <label for="region" class="form-label">Region</label>
+    <input type="text" class="form-control" name="region" id="region" required value="{{ data['deployment']['region'] }}">
+  </div>
+  <div class="col-md-6">
+    <label for="country_id" class="form-label">Country</label>
+    <select name="country_id" id="country_id" class="form-select" required>
+    <option value="" selected disabled hidden>Choose...</option>
+    {% for _, c in data['all_countries'].iterrows()%}
+      <option value="{{ c['id'] }}" {% if c['id'] == data['deployment']['country_id'] %}selected{% endif %}>{{ c['name'] }}</option>
+    {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-12">
+    <label for="comments" class="form-label">Comments</label>
+    <input type="textarea" class="form-control" name="comments" id="comments" value="{{ data['deployment']['comments'] }}">
+  </div>
+  <hr>
+  <h2>
+    Contacts
+    <div class='d-inline-block ps-1'>
+      <button type="button" data-bs-toggle="modal" data-bs-target="#contactAddModal">
+        <img src="{{ url_for('static', filename='icons/plus.svg') }}" height=15 width=15/>
+      </button>
+    </div>
+  </h2>
+  {% for idx, r in data['all_contacts'].sort_values(by='name').iterrows() %}
+  <div class="col-md-2">
+    <input class="form-check-input" type="checkbox" value={{ r['id'] }} name="contact{{ r['id'] }}" id="contact{{ r['id'] }}" {% if r['id'] in data['contacts']['id'].unique() %}checked{% endif %}>
+    <label class="form-check-label" for="contact{{ r['id'] }}">
+      <a href={{ url_for('contact.edit', cid=r['id']) }} class="highlight">{{ r['name'] }}</a>
+    </label>
+  </div>
+  {% endfor %}
+  <hr>
+  <h2>
+    Moorings
+    <div class='d-inline-block ps-1'>
+      <button type="button" data-bs-toggle="modal" data-bs-target="#mooringAddModal">
+        <img src="{{ url_for('static', filename='icons/plus.svg') }}" height=15 width=15/>
+      </button>
+    </div>
+  </h2>
+  {{ components.table('mooringsTable', data['moorings']) }}
+  <hr>
+  <div class="col-md-2">
+    <button type="submit" class="btn btn-primary">Submit</button>
+  </div>
+  <div class="col-md-2">
+    <button type="button" class="btn btn-secondary" onclick="window.location.href='{{ request.referrer }}'">Cancel</button>
+  </div>
+</form>
+{{ components.modal('contactAddModal', 'Add Contact', contact.add()) }}
+{{ components.modal('mooringAddModal', 'Add Mooring', mooring.add()) }}
+
+{{ components.modal('deploymentDeleteModal', 'Delete Deployment', deployment.delete()) }}  
+{% endblock %}
+
+{% block scripts%}
+  {{ scripts.format_table('mooringsTable') }}
+  {{ scripts.set_form_options() }}
+{% endblock %}

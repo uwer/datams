@@ -1,0 +1,13 @@
+[Unit]
+Description=Celery Service for datams
+After=network.target redis.service
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/usr/local/src/datams
+Environment="PATH=/usr/local/src/datams/.venv/datams/bin"
+ExecStart=/usr/local/src/datams/.venv/datams/bin/celery --app make_celery worker --loglevel=DEBUG --pool=solo
+
+[Install]
+WantedBy=multi-user.target

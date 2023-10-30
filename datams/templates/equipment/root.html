@@ -1,0 +1,20 @@
+{% set title = ('Equipment', None, None)%}
+{% set button = {'id': 'equipmentAddButton', 'class': 'btn btn-success btn-md', 'label': 'ADD EQUIPMENT', 'target': 'equipmentAddModal', 'modal_target': True} %}
+
+{% extends "root.html" %}
+
+{% block title %}
+    Equipment
+{% endblock %}
+
+{% block table %}
+    {{ components.table('equipmentTable', data['equipment']) }}
+{% endblock %}
+
+{% block modal %}
+    {{ components.modal('equipmentAddModal', 'Add Equipment', equipment.add()) }}
+{% endblock %}
+
+{% block scripts %}
+    {{ scripts.format_table('equipmentTable') }}
+{% endblock %}

@@ -1,0 +1,13 @@
+[Unit]
+Description=Gunicorn Instance Serving datams
+After=network.target redis.service celery.service
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/usr/local/src/datams
+Environment="PATH=/usr/local/src/datams/.venv/datams/bin"
+ExecStart=/usr/local/src/datams/.venv/datams/bin/gunicorn --workers 3 --bind unix:datams.sock -m 007 wsgi:app
+
+[Install]
+WantedBy=multi-user.target

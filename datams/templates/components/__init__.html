@@ -1,0 +1,36 @@
+{% macro navbar() %}
+  {% include "/components/navbar.html" %}
+{% endmacro %}
+
+{% macro banner() %}
+  {% include "/components/banner.html" %}
+{% endmacro %}
+
+{% macro table(id, df, columns=none, numrows=none) %}
+  {% include "/components/table.html" %}
+{% endmacro %}
+
+{% macro modal(id, title, contents, size='md') %}
+  {% include '/components/modal.html' %}
+{% endmacro %}
+
+{% macro accordian(id, df) %}
+  {% include "/components/accordian.html" %}
+{% endmacro %}
+
+{# TODO: Remove inline styling from this template  #}
+{% macro contactcards(df, gw=2) %}
+  {% include "/components/contactcards.html" %}
+{% endmacro %}
+
+{% macro summary(id, srs, keys=none) %}
+  {% include "/components/summary.html" %}
+{% endmacro %}
+
+{% macro loader(id) %}
+  {% include "/components/loader.html" %}
+{% endmacro %}
+
+{% macro avatar(id, data=None) %}
+  {% include "/components/avatar.html" %}
+{% endmacro %}

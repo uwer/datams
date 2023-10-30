@@ -1,0 +1,13 @@
+<form class="row g-3" method="POST" action="{{ url_for('contact.delete', cid=data['contact']['id']) }}">
+  <div class="col-md-12">
+    <p>Are you sure you want to delete this contact?</p>
+  </div>
+  <div class="col-md-7">
+  </div>
+  <div class="col-md-3">
+    <button type="submit" class="btn btn-danger">Continue</button>
+  </div>
+  <div class="col-md-2">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+  </div>
+</form>

@@ -1,0 +1,20 @@
+{% set title = ('Organizations', None, None)%}
+{% set button = {'id': 'organizationAddButton', 'class': 'btn btn-success btn-md', 'label': 'ADD ORGANIZATION', 'target': 'organizationAddModal', 'modal_target': True} %}
+
+{% extends "root.html" %}
+
+{% block title %}
+    Organizations
+{% endblock %}
+
+{% block table %}
+    {{ components.table('organizationTable', data['organizations']) }}
+{% endblock %}
+
+{% block modal %}
+    {{ components.modal('organizationAddModal', 'Add Organization', organization.add()) }}
+{% endblock %}
+
+{% block scripts %}
+    {{ scripts.format_table('organizationTable') }}
+{% endblock %}

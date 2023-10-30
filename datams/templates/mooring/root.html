@@ -1,0 +1,20 @@
+{% set title = ('Moorings', None, None)%}
+{% set button = {'id': 'mooringAddButton', 'class': 'btn btn-success btn-md', 'label': 'ADD MOORING', 'target': 'mooringAddModal', 'modal_target': True} %}
+
+{% extends "root.html" %}
+
+{% block title %}
+    Moorings
+{% endblock %}
+
+{% block table %}
+    {{ components.table('mooringsTable', data['moorings']) }}
+{% endblock %}
+
+{% block modal %}
+    {{ components.modal('mooringAddModal', 'Add Mooring', mooring.add()) }}
+{% endblock %}
+
+{% block scripts %}
+    {{ scripts.format_table('mooringsTable') }}
+{% endblock %}

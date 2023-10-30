@@ -1,0 +1,17 @@
+{% set title = ('User Options', none, none) %}
+{% set button = none %}
+
+{% extends "main.html" %}
+
+{% block title %}
+    {{ title }}
+{% endblock %}
+
+{% block content %}
+<ul>
+  <li class='pb-3'><button>Change Password</button></li>
+  <li><button>Add User</button></li>
+  <li><button>Remove User</button></li>
+  <li><button>Lock User</button></li>
+</ul>
+{% endblock %}

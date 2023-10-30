@@ -1,0 +1,83 @@
+{% set title = ('(Lat:' + data['mooring']['latitude']|string + ', Lon:' + data['mooring']['longitude']|string + ') -- ' + data['mooring']['deployed']|string + ' to ' + data['mooring']['recovered']|string, None, None) %}
+{% set button = {'id': 'mooringDeleteButton', 'class': 'btn btn-danger btn-md', 'label': 'DELETE MOORING', 'target': 'mooringDeleteModal', 'modal_target': True} %}
+
+{% extends "main.html" %}
+
+{% block title %}
+    {{ title[0] }}
+{% endblock %}
+
+{% block content %}
+<h2>General</h2>
+<form class="row g-3" method="POST" action="{{ url_for('mooring.edit', mid=data['mooring']['id']) }}">
+  <div class="col-md-9">
+    <label for="deployment_id" class="form-label">Deployment</label>
+    <select name="deployment_id" id="deployment_id" class="form-select" required>
+    <option value="" selected disabled hidden>Choose...</option>
+    {% for _, d in data['all_deployments'].iterrows() %}
+      <option value="{{ d['id'] }}" {% if d['id'] == data['mooring']['deployment_id'] %} selected {% endif %}>{{ d['name'] }}</option>
+    {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3">
+    <label for="timezone" class="form-label">Time-Zone</label>
+    <select name="timezone" id="timezone" class="form-select" required>
+    <option value="" selected disabled hidden>Choose...</option>
+    {% for k, v in data['all_timezones'].items() %}
+      <option value="{{ v }}" {% if k == data['mooring']['timezone'] %} selected {% endif %}>{{ k }}</option>
+    {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-6">
+    <label for="deployed" class="form-label">Deployed</label>
+    <input type="datetime-local" class="form-control" name="deployed" id="deployed" required value="{{ data['mooring']['deployed'] }}">
+  </div>
+  <div class="col-md-6">
+    <label for="recovered" class="form-label">Recovered</label>
+    <input type="datetime-local" class="form-control" name="recovered" id="recovered" value="{{ data['mooring']['recovered'] }}">
+  </div>
+  
+  <div class="col-md-3">
+    <label for="latitude" class="form-label">Latitude</label>
+    <input type="number" class="form-control" name="latitude" id="latitude" required value="{{ data['mooring']['latitude'] }}">
+  </div>
+  <div class="col-md-3">
+    <label for="longitude" class="form-label">Longitude</label>
+    <input type="number" class="form-control" name="longitude" id="longitude" required value="{{ data['mooring']['longitude'] }}">
+  </div>
+  <div class="col-md-3">
+    <label for="seafloor_depth" class="form-label">Ocean Depth</label>
+    <input type="number" class="form-control" name="seafloor_depth" id="seafloor_depth" value="{{ data['mooring']['seafloor_depth'] }}">
+  </div>
+  <div class="col-md-3">
+    <label for="line_length" class="form-label">Line Length</label>
+    <input type="number" class="form-control" name="line_length" id="line_length" value="{{ data['mooring']['line_length'] }}">
+  </div>
+  <div class="col-md-12">
+    <label for="comments" class="form-label">Comments</label>
+    <input type="textarea" class="form-control" name="comments" id="comments" value="{{ data['mooring']['comments'] }}">
+  </div>
+  <hr>
+  <h2>Equipment</h2>
+  {% for idx, r in data['all_equipment'].sort_values(by='item').iterrows() %}
+  <div class="col-md-2">
+    <input class="form-check-input" type="checkbox" value={{ r['id'] }} name="equipment{{ r['id'] }}" id="equipment{{ r['id'] }}" {% if r['id'] in data['equipment']['id'].unique() %}checked{% endif %}>
+    <label class="form-check-label" for="equipment{{ r['id'] }}">
+      <a  href={{ url_for('equipment.details', eid=r['id']) }} class="highlight">
+      {{ r['item'] }}</br>[{{ r['serial_number'] }}]
+      </a>
+    </label>
+  </div>
+  {% endfor %}
+  <hr>
+  <div class="col-md-2">
+    <button type="submit" class="btn btn-primary">Submit</button>
+  </div>
+  <div class="col-md-2">
+    <button type="button" class="btn btn-secondary" onclick="window.location.href='{{ request.referrer }}'">Cancel</button>
+  </div>
+</form>
+
+
+{{ components.modal('mooringDeleteModal', 'Delete Mooring', mooring.delete()) }}
+{% endblock %}

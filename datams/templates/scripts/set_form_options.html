@@ -1,0 +1,60 @@
+{#
+Parameters
+----------
+`df`: pd.DataFrame  -> should contain columns `id` and `name`
+
+#}
+<script>
+{% if 'all_organizations' in data %}
+  let option = null;
+  {% for idx, i in data['all_organizations'].iterrows() %}
+  option = document.createElement('option');
+  option.value = "{{ i['id']|int }}";
+  option.textContent = "{{ i['name'] }}";
+  organization_options[{{idx}}] = option;
+  {% endfor %}
+  {% if 'all_deployments' in data %}
+      {% for i in data['all_organizations']['id'].unique() %}
+      deployment_map.set("{{ i|int }}", []);
+      {% endfor %}
+      {% for idx, i in data['all_deployments'].iterrows() %}
+      {% for j in i['oids'] %}
+      deployment_map.get("{{ j|int }}")[deployment_map.get("{{ j|int }}").length] = {{idx}}
+      {% endfor %}
+      option = document.createElement('option');
+      option.value = "{{ i['id']|int }}";
+      option.textContent = "{{ i['name']|safe }}";
+      deployment_options[{{idx}}] = option;
+      {% endfor %}
+    {% if 'all_moorings' in data %}
+        {% for i in data['all_deployments']['id'].unique() %}
+        mooring_map.set("{{ i|int }}", []);
+        {% endfor %}
+        {% for idx, i in data['all_moorings'].iterrows() %}
+        mooring_map.get("{{i['did']|int}}")[mooring_map.get("{{i['did']|int}}").length] = {{idx}}
+        option = document.createElement('option');
+        option.value = "{{ i['id']|int }}";
+        option.textContent = "(Lat: {{ i['latitude'] }}, Lon: {{ i['longitude'] }})";
+        mooring_options[{{idx}}] = option;
+        {% endfor %}
+      {% if 'all_equipment' in data %}
+          {% for i in data['all_moorings']['id'].unique() %}
+          equipment_map.set("{{i|int}}", []);
+          {% endfor %}
+          {% for idx, i in data['all_equipment'].iterrows() %}
+          {# {% if i['mids'] is not none %} #}
+          {% for j in i['mids'] %}
+          equipment_map.get("{{j|int}}")[equipment_map.get("{{j|int}}").length] = {{idx}}
+          {% endfor %}
+          {# {% endif %} #}
+          option = document.createElement('option');
+          option.value = "{{ i['id']|int }}";
+          option.textContent = "{{ i['item'] }} [SN: {{ i['serial_number'] }}]";
+          equipment_options[{{idx}}] = option;
+          {% endfor %}
+      {% endif %}
+    {% endif %}
+  {% endif %}
+{% endif %}
+   
+</script>

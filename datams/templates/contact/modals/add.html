@@ -1,0 +1,50 @@
+<form class="row g-3" method="POST" enctype="multipart/form-data" action="{{ url_for('contact.add') }}">
+  <div class="col-md-6">
+    <label for="first_name" class="form-label">First Name</label>
+    <input type="text" class="form-control" name="first_name" id="first_name" required>
+  </div>
+  <div class="col-md-6">
+    <label for="last_name" class="form-label">Last Name</label>
+    <input type="text" class="form-control" name="last_name" id="last_name" required>
+  </div>
+  <div class="col-md-8">
+    <label for="organization_id" class="form-label">Organization</label>
+    <select name="organization_id" id="organization_id" class="form-select" required>
+      <option value="" selected disabled hidden>Choose...</option>
+    {% for _, i in data['all_organizations'].iterrows()%}
+      <option value="{{ i['id'] }}">{{ i['name'] }}</option>
+    {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-4">
+    <label for="position" class="form-label">Position</label>
+    <select name="position" id="position" class="form-select" required>
+    <option value="" selected disabled hidden>Choose...</option>
+    {% for i in data['all_positions']%}
+      <option value="{{ i }}">{{ i }}</option>
+    {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-6">
+    <label for="email" class="form-label">Email</label>
+    <input type="email" class="form-control" name="email" id="email" required>
+  </div>
+  <div class="col-md-6">
+    <label for="phone" class="form-label">Phone</label>
+    <input type="tel" class="form-control" name="phone" id="phone">
+  </div>
+  <div class="col-md-12">
+    <label for="avatar" class="form-label">Profile Picture</label>
+    <input type="file" id="avatar" name="avatar" accept="image/png, image/jpeg">
+  </div>
+  <div class="col-md-12">
+    <label for="comments" class="form-label">Comments</label>
+    <input type="textarea" class="form-control" name="comments" id="comments">
+  </div>
+  <div class="col-md-2">
+    <button type="submit" class="btn btn-primary">Submit</button>
+  </div>
+  <div class="col-md-2">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+  </div>
+</form>

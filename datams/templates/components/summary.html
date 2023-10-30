@@ -1,0 +1,23 @@
+{#
+
+  id
+  srs
+  keys
+  
+#}
+{% if keys is none %}
+{% set keys = srs.index %}
+{% endif %}
+
+<div id={{ id }} class='pb-md-3'>
+  <div class="d-inline-block pe-md-3">
+  {% for i in keys %}
+    <p class="p-0 m-0"><b>{{ i.replace('_', ' ').title() }}:</b></p>
+  {% endfor %}
+  </div>
+  <div class="d-inline-block">
+  {% for i in keys %}
+  <p class="p-0 m-0">{% if not pd.isna(srs[i]) and srs[i] != '' %}{{ srs[i] }}{% else %}&nbsp;{% endif %}</p>
+  {% endfor %}
+  </div>
+</div>

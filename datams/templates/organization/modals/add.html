@@ -1,0 +1,29 @@
+<form class="row g-3" method="POST" action="{{ url_for('organization.add') }}">
+  <div class="col-md-12">
+    <label for="name" class="form-label">Name</label>
+    <input type="text" class="form-control" name="name" id="name" required="True">
+  </div>
+  <div class="col-md-4">
+    <label for="abbreviation" class="form-label">Abbreviation</label>
+    <input type="text" class="form-control" name="abbreviation" id="abbreviation" required="True">
+  </div>
+  <div class="col-md-8">
+    <label for="country_id" class="form-label">Country</label>
+    <select name="country_id" id="country_id" class="form-select" required="True">
+    <option value="" selected disabled hidden>Choose...</option>
+    {% for _, c in data['all_countries'].iterrows()%}
+      <option value="{{ c['id'] }}">{{ c['name'] }}</option>
+    {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-12">
+    <label for="comments" class="form-label">Comments</label>
+    <input type="textarea" class="form-control" name="comments" id="comments">
+  </div>
+  <div class="col-md-2">
+    <button type="submit" class="btn btn-primary">Submit</button>
+  </div>
+  <div class="col-md-2">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+  </div>
+</form>

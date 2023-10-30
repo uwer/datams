@@ -1,0 +1,14 @@
+{#
+Parameters
+----------
+`id`: str
+`dom`: str 't'
+`paging`: bool false
+`pagelength`: int 10
+`header`: bool true
+`highlight`: bool true
+`serverside`: str ''
+#}
+<script>
+  format_table("{{ id }}", "{{ dom }}", {{ paging|string|lower }}, {{ pagelength }}, {{ header|string|lower }}, {{ highlight|string|lower }}, "{{ serverside }}");
+</script>

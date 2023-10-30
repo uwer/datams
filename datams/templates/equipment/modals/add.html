@@ -1,0 +1,51 @@
+<form class="row g-3" method="POST" action="{{ url_for('equipment.add') }}">
+  <div class="col-md-4">
+    <label for="serial_number" class="form-label">Serial Number</label>
+    <input type="text" class="form-control" name="serial_number" id="serial_number" required="True">
+  </div>
+  <div class="col-md-4">
+    <label for="make" class="form-label">Make</label>
+    <input type="text" class="form-control" name="make" id="make" required="True">
+  </div>
+  <div class="col-md-4">
+    <label for="model" class="form-label">Model</label>
+    <input type="text" class="form-control" name="model" id="model" required="True">
+  </div>
+  <div class="col-md-6">
+    <label for="item" class="form-label">Item</label>
+    <select name="item" id="item" class="form-select" required="True">
+    <option value="" selected disabled hidden>Choose...</option>
+    {% for d in data['all_items'] %}
+      <option value="{{ d }}">{{ d }}</option>
+    {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-6">
+    <label for="status" class="form-label">Status</label>
+    <select name="status" id="status" class="form-select" required="True">
+    <option value="" selected disabled hidden>Choose...</option>
+    {% for d in data['all_status'] %}
+      <option value="{{ d }}">{{ d }}</option>
+    {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-12">
+    <label for="organization_id" class="form-label">Owner</label>
+    <select name="organization_id" id="organization_id" class="form-select" required="True">
+    <option value="" selected disabled hidden>Choose...</option>
+    {% for _, d in data['all_organizations'].iterrows() %}
+      <option value="{{ d['id'] }}">{{ d['name'] }}</option>
+    {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-12">
+    <label for="comments" class="form-label">Comments</label>
+    <input type="textarea" class="form-control" name="comments" id="comments">
+  </div>
+  <div class="col-md-2">
+    <button type="submit" class="btn btn-primary">Submit</button>
+  </div>
+  <div class="col-md-2">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+  </div>
+</form>

@@ -1,0 +1,15 @@
+{% macro format_accordian(id, df) %}
+  {% include "/scripts/format_accordian.html" %}
+{% endmacro %}
+
+{% macro format_map(id, center, zoom, points) %}
+  {% include "/scripts/format_map.html" %}
+{% endmacro %}
+
+{% macro format_table(id, dom='t', paging=false, pagelength=10, highlight=true, header=true, serverside='') %}
+  {% include "/scripts/format_table.html" %}
+{% endmacro %}
+
+{% macro set_form_options() %}
+  {% include "/scripts/set_form_options.html" %}
+{% endmacro %}

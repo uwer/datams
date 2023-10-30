@@ -1,0 +1,98 @@
+{% set title = (data['organization']['abbreviation'], data['organization']['name'], data['organization']['country']) %}
+{% set button = {'id': 'organizationDeleteButton', 'class': 'btn btn-danger btn-md', 'label': 'DELETE ORGANIZATION', 'target': 'organizationDeleteModal', 'modal_target': True} %}
+
+{% extends "main.html" %}
+
+{% block title %}
+    {{ title[0] }} Edit
+{% endblock %}
+
+{% block content %}
+<form class="row g-3" method="POST" action="{{ url_for('organization.edit', oid=data['organization']['id']) }}">
+  <h2>General</h2>
+  <div class="col-md-12">
+    <label for="name" class="form-label">Name</label>
+    <input type="text" class="form-control" name="name" id="name" required="True" value="{{ data['organization']['name'] }}">
+  </div>
+  <div class="col-md-4">
+    <label for="abbreviation" class="form-label">Abbreviation</label>
+    <input type="text" class="form-control" name="abbreviation" id="abbreviation" required="True" value="{{ data['organization']['abbreviation'] }}">
+  </div>
+  <div class="col-md-8">
+    <label for="country_id" class="form-label">Country</label>
+    <select name="country_id" id="country_id" class="form-select" required="True">
+    <option value="" selected disabled hidden>Choose...</option>
+    {% for _, c in data['all_countries'].iterrows()%}
+      <option value="{{ c['id'] }}" {% if data['organization']['country_id'] == c['id'] %}selected{% endif %}>{{ c['name'] }}</option>
+    {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-12">
+    <label for="comments" class="form-label">Comments</label>
+    <input type="textarea" class="form-control" name="comments" id="comments" {% if data['organization']['comments'] %}value="{{ data['organization']['comments'] }}" {% endif %}>
+  </div>
+  <hr>
+  <h2>
+    Team Members
+    <div class='d-inline-block ps-1'>
+      <button type="button" data-bs-toggle="modal" data-bs-target="#contactAddModal">
+        <img src="{{ url_for('static', filename='icons/plus.svg') }}" height=15 width=15/>
+      </button>
+    </div>
+  </h2>
+  {% for idx, r in data['all_contacts'].sort_values(by='name').iterrows() %}
+  <div class="col-md-2">
+    <input class="form-check-input" type="checkbox" value={{ r['id'] }} name="contact{{ r['id'] }}" id="contact{{ r['id'] }}" {% if r['id'] in data['contacts']['id'].unique() %}checked{% endif %}>
+    <label class="form-check-label" for="contact{{ r['id'] }}">
+      <a href={{ url_for('contact.details', cid=r['id']) }} class="highlight">{{ r['name'] }}</a>
+    </label>
+  </div>
+  {% endfor %}
+  <hr>
+  <h2>
+    Deployments
+    <div class='d-inline-block ps-1'>
+      <button type="button" data-bs-toggle="modal" data-bs-target="#deploymentAddModal">
+        <img src="{{ url_for('static', filename='icons/plus.svg') }}" height=15 width=15/>
+      </button>
+    </div>
+  </h2>
+  {% for idx, r in data['all_deployments'].sort_values(by='date').iterrows() %}
+  <div class="col-md-2">
+    <input class="form-check-input" type="checkbox" value={{ r['id'] }} name="deployment{{ r['id'] }}" id="deployment{{ r['id'] }}" {% if r['id'] in data['deployments']['id'].unique() %}checked{% endif %}>
+    <label class="form-check-label" for="deployment{{ r['id'] }}">
+      <a href={{ url_for('deployment.details', did=r['id']) }} class="highlight">{{ r['date'] }}</br>{{ r['region'] }}</a>
+    </label>
+  </div>
+  {% endfor %}
+  <hr>
+  <h2>
+    Equipment
+    <div class='d-inline-block ps-1'>
+      <button type="button" data-bs-toggle="modal" data-bs-target="#equipmentAddModal">
+        <img src="{{ url_for('static', filename='icons/plus.svg') }}" height=15 width=15/>
+      </button>
+    </div>
+  </h2>
+  {% for idx, r in data['all_equipment'].sort_values(by='item').iterrows() %}
+  <div class="col-md-2">
+    <input class="form-check-input" type="checkbox" value={{ r['id'] }} name="equipment{{ r['id'] }}" id="equipment{{ r['id'] }}" {% if r['id'] in data['equipment']['id'].unique() %}checked{% endif %}>
+    <label class="form-check-label" for="equipment{{ r['id'] }}">
+      <a href={{ url_for('equipment.details', eid=r['id']) }} class="highlight">{{ r['item'] }}</br>[{{ r['serial_number'] }}]</a>
+    </label>
+  </div>
+  {% endfor %}
+  <hr>
+  <div class="col-md-2">
+    <button type="submit" class="btn btn-primary">Submit</button>
+  </div>
+  <div class="col-md-2">
+    <button type="button" class="btn btn-secondary" onclick="window.location.href='{{ request.referrer }}'">Cancel</button>
+  </div>
+</form>
+
+{{ components.modal('contactAddModal', 'Add Contact', contact.add()) }}
+{{ components.modal('deploymentAddModal', 'Add Deployment', deployment.add()) }}
+{{ components.modal('equipmentAddModal', 'Add Equipment', equipment.add()) }}
+{{ components.modal('organizationDeleteModal', 'Delete Organization', organization.delete()) }} 
+{% endblock %}

@@ -1,0 +1,32 @@
+{#
+Expected Variables
+ - id              # str 
+ - center          # Tuple[float, float]
+ - zoom            # int
+ - points          # pd.DataFrame(columns=['hydrophones':str, 'html':str, 'latitude':float, 'longitude':float, 'icon': str (svg path d value), 'color': str (i.e. #aaff11)])
+ 
+#}
+<script>
+function initMap() {
+  let center = {lat: {{ center[0] }}, lng: {{ center[1] }}};
+  let points = [
+    {% for idx, row in points.iterrows() %}
+    {% if not pd.isna(row['latitude']) and not pd.isna(row['longitude']) %}
+    new Map([
+      {% for i in ['hydrophones', 'icon', 'color'] %}
+        ["{{ i }}", `{{ row[i] }}`],
+      {% endfor %}
+      {% for i in ['latitude', 'longitude'] %}
+        ["{{ i }}", {{ row[i] }}],
+      {% endfor %}
+      {% for i in ['html'] %}
+        ["{{ i }}", `{{ row[i]|safe }}`],
+      {% endfor %}
+    ]),
+    {% endif %}
+    {% endfor %}
+  ];
+  formatMap("{{ id }}", center, {{ zoom }}, points);
+}
+</script>
+<script src="https://maps.googleapis.com/maps/api/js?key={{ google_api_key }}&callback=initMap"></script>

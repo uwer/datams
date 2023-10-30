@@ -1,0 +1,48 @@
+{% set title = (data['organization']['abbreviation'], data['organization']['name'], data['organization']['country']) %}
+{% set button = {'id': 'organizationEditButton', 'class': 'btn btn-warning btn-md', 'label': 'EDIT ORGANIZATION', 'target': url_for('organization.edit', oid=data['organization']['id']), 'modal_target': False} %}
+
+{% extends "main.html" %}
+
+{% block title %}
+    {{ title[0] }} Details
+{% endblock %}
+
+{% block content %}
+  {# TODO: Insert data['organization']['comments'] if they are not None #}
+    <div style="padding: 0px 5px 0px 5px; display: flex; flex-flow: column; background-color: rgb(235,235,235); float:left; height: 100%; width: 16%;">
+      <h2>Contacts</h2>
+      <div style="flex-grow: 1; overflow-y: auto;">
+      {{ components.contactcards(data['contacts'], 2) }}
+      </div>
+    </div>
+    <div style="padding: 0px 5px 0px 5px; display: flex; flex-flow: column; background-color: rgb(245,245,245); float:left; height: 100%; width: 28%;">
+      <h2>Deployments</h2>
+      <div style="flex-grow: 1; overflow-y: auto;">
+      {{ components.table('deploymentsTable', data['deployments']) }} 
+      </div>
+    </div>
+    <div style="padding: 0px 5px 0px 5px; display: flex; flex-flow: column; background-color: rgb(235,235,235); float:left; height: 100%; width: 28%;">
+      <h2>Documents</h2>
+      <div style="flex-grow: 1; overflow-y: auto;">
+      {{ components.table('ofilesTable', data['ofiles']) }}
+      </div>
+    </div>
+    <div style="padding: 0px 5px 0px 5px; display: flex; flex-flow: column; background-color: rgb(245,245,245); float:left; height: 100%; width: 28%;">
+      <h2>Equipment</h2>
+      <div style="flex-grow: 1; overflow-y: auto;">
+      {{ components.table('equipmentsTable', data['equipment']) }}
+      </div>
+    </div>
+  {{ components.modal('organizationDeleteModal', 'Delete Organization', organization.delete()) }}
+{% endblock %}
+
+{% block scripts%}
+    {{ scripts.format_table('deploymentsTable') }}
+    {{ scripts.format_table('ofilesTable') }}
+    {{ scripts.format_table('equipmentsTable') }}
+    <script>
+      window.onload = resize_contents;
+      window.onresize = resize_contents;
+    </script>
+{% endblock %}
+<!--<img class="ms-3" src="{{ url_for('static', filename='/icons/plus.svg') }}" height="22" width="22"/>-->

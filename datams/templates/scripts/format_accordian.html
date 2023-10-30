@@ -1,0 +1,12 @@
+{#
+Parameters
+----------
+`id`: str
+`df`: str 't'
+#}
+
+{% from "/scripts/__init__.html" import format_table with context %}
+
+{% for i in df['section'].unique() %}
+  {{ format_table('mfilesAccordian' + 'Table' + loop.index0|string, dom="flipt", header=False, paging=True) }}
+{% endfor %}

@@ -1,0 +1,96 @@
+# NOTE: All paths relative to root of repository
+app:
+  SECRET_KEY: dummy_key
+  # generate a new key for security
+  USE_SESSION_FOR_NEXT: True 
+  # used by login
+  GOOGLE_API_KEY: dummy_key
+  # Used by google servers for authenticating user
+  
+  UPLOADS:
+    directory: /var/lib/datams/uploads/submitted
+    pending_directory: /var/lib/datams/uploads/pending
+    allowed_extensions: ['png', 'jpg', 'jpeg', 'txt', 'data', 'log.xml', 'xml', 'pdf', 'doc', 'docx', 'svg']
+  
+  DATABASE:
+    dialect: postgresql
+    driver: psycopg2
+    username: datams
+    password: dummy_password
+    host: '127.0.0.1'
+    port: 5432
+    database: datams
+  
+  CELERY:
+    broker_url: 'redis://127.0.0.1:6379/0'
+    result_backend: 'redis://127.0.0.1:6379/0'
+    task_ignore_result: True
+    # celery_imports: ('datams.redis',)
+  
+  REDIS:
+    host: '127.0.0.1'
+    port: 6379
+    decode_responses: True
+    
+map:
+  MOORING_ICON: ./datams/static/icons/hydrophone.svg
+  # Icon used on maps to display hydrophones
+
+menu:
+  EQUIPMENT_ITEMS: 
+    - Acoustic Release
+    - Acoustic Release Deck Unit
+    - Battery Pack
+    - Hydrophone
+    - Hydrophone (Archival)
+    - Hydrophone (Real-Time)
+    
+  EQUIPMENT_STATUS:
+    - Active
+    - Available
+    - Deployed
+    - Loaned
+    - Lost At Sea
+    - Maintenance Required
+    - Unknown
+    
+  CONTACT_POSITIONS:
+    - Analyst
+    - Project Manager
+    - Equipment Manager
+    - Executive Director
+    - Fisheries Acoustician
+    - Strategic Manager
+    - Strategic Ocean Lead
+    - Team Leader
+    - Organization Manager
+    - Vessel Crew (Recovery)
+    - Vessel Crew (Deployment)
+    - Senior Research Technician
+    - Senior Research Scientist
+    - Senior Data Scientist
+    - Scientific Programmer
+    - Marine Biologist
+    - Mechanical Engineer
+    - Research Technician
+    - Principal Fisheries Officer
+    - Technical Coordinator Sustainable Fisheries
+    - Technical Coordinator
+    - Ecologist
+    - Principal Research Scientist
+    - Project Coordinator
+    - Hardware Engineer
+    - Vertebrate Ecologist
+    - Other
+  
+  FILE_DESCRIPTIONS:
+    - Acceleration Data
+    - Audio Data
+    - Logging Data
+    - Temperature Data
+    - Field Data Sheets
+    - Compressed SoundTrap Data
+    - Analysis File
+    - Report
+    - Other
+    
