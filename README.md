@@ -139,9 +139,9 @@ If this is not the correct location then it can be found using
 ```
 
 ### Other
-TODO: HOW TO GET GOOGLE API KEY?
-TODO: SET UP BACKUP OF POSTGRES
-TODO: CONTAINERIZE
+- TODO: HOW TO GET GOOGLE API KEY?
+- TODO: SET UP BACKUP OF POSTGRES
+- TODO: CONTAINERIZE
 
 
 ## TODO
