@@ -2,7 +2,7 @@ from flask import Blueprint, redirect, render_template, request, url_for
 from flask_login import login_required
 from datams.db.views import (organization_root, organization_details, organization_edit,
                              organization_add, organization_delete)
-
+from datams.utils import APP_CONFIG
 
 bp = Blueprint('organization', __name__, url_prefix='/organization')
 
@@ -45,5 +45,7 @@ def details(oid: int):
 @bp.route('/', methods=('GET',))
 @login_required
 def root():
+    v = APP_CONFIG['UPLOADS']['directory']
+    raise Exception
     data = organization_root()
     return render_template('organization/root.html', data=data)

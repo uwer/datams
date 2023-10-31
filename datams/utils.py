@@ -21,9 +21,24 @@ logging.basicConfig()
 log = logging.getLogger()
 log.setLevel(logging.DEBUG)
 
+
+def expand_environmental_variables(d):
+    if issubclass(type(d), str):
+        return os.path.expandvars(d)
+    elif issubclass(type(d), dict):
+        d2 = dict()
+        for k, v in d.items():
+            d2[k] = expand_environmental_variables(v)
+        return d2
+    else:
+        return d
+
+
 rootdir = os.path.dirname(os.path.realpath(__file__))
 with open(os.path.join(rootdir, "config.yml"), "r") as conf_file:
     config = yaml.safe_load(conf_file)
+    config = expand_environmental_variables(config)
+
 
 APP_CONFIG = config['app']
 MAP_CONFIG = config['map']
