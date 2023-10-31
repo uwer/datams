@@ -9,9 +9,7 @@ services:
     image: datams/ubuntu:22.04
     build:
       dockerfile: datams.dockerfile
-      
-    command: 
-      - "gunicorn --workers 3 --bind unix:datams.sock -m 007 wsgi:app"
+    
     environment:
       REDISSERVER: redis://redis:6379
       C_FORCE_ROOT: "true"
@@ -34,7 +32,7 @@ services:
   worker:
     image: datams/ubuntu:22.04
     command:
-       - "celery --app make_celery worker --loglevel=DEBUG --pool=solo"
+       - "run_celery.sh"
     build:
       dockerfile: datams.dockerfile
     restart: always
