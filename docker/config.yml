@@ -1,15 +1,16 @@
 # NOTE: All paths relative to root of repository
 app:
-  SECRET_KEY: dummy_key
+  SECRET_KEY: 94c75b0757c0dc592d1cf5b877443d2ccc412561136abdd7246af32dad76365a
   # generate a new key for security
-  USE_SESSION_FOR_NEXT: True 
+  USE_SESSION_FOR_NEXT: True
+  
   # used by login
-  GOOGLE_API_KEY: dummy_key
+  GOOGLE_API_KEY: 773b951aa8457a0c6d0de74fa4687701e5b603c4829c6bce244e171884a640e3
   # Used by google servers for authenticating user
   
   UPLOADS:
-    directory: /var/lib/datams/uploads/submitted
-    pending_directory: /var/lib/datams/uploads/pending
+    directory: /app/run/uploads/submitted
+    pending_directory: /app/run/uploads/pending
     allowed_extensions: ['png', 'jpg', 'jpeg', 'txt', 'data', 'log.xml', 'xml', 'pdf', 'doc', 'docx', 'svg']
   
   DATABASE:

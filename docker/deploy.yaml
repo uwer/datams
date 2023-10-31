@@ -5,11 +5,13 @@ networks:
     external: false
     
 services:
-  webapi:
+  webserver:
     image: datams/ubuntu:22.04
     build:
       dockerfile: datams.dockerfile
-    
+    command:
+       - "/app/run_gu.sh"
+    container_name: webserver
     environment:
       REDISSERVER: redis://redis:6379
       C_FORCE_ROOT: "true"
@@ -20,19 +22,21 @@ services:
         max-file: "10"
         compress: "true"
     ports:
-      - "5000:80"
+      - "5880:8000"
     volumes:
-      - ":/var/lib/datams/uploads/submitted"
-      - ":/var/lib/datams/uploads/pending"
+      - "./test/sub:/app/run/uploads/submitted"
+      - "./test/staging:/app/run/uploads/pending"
     depends_on:
       - redis
+      - postgres
     networks:
       - datams
       
   worker:
     image: datams/ubuntu:22.04
     command:
-       - "run_celery.sh"
+       - "/app/run_celery.sh"
+    container_name: workers
     build:
       dockerfile: datams.dockerfile
     restart: always
@@ -46,21 +50,8 @@ services:
       C_FORCE_ROOT: "true"
     depends_on:
       - redis
-    networks:
-      - datams
-      
-  nginx:
-    image: datams/nginx
-    build:
-      dockerfile: nginx.dockerfile
-    restart: always
-    ports:
-      - "8088:80"
-    logging:
-      options:
-        max-size: "100m"
-        max-file: "10"
-        compress: "true"
+      - postgres
+      - webserver
     networks:
       - datams
    
@@ -77,7 +68,7 @@ services:
         compress: "true"
       
   postgres:
-    image: postgres/14-alpine 
+    image: postgres:15-alpine3.18
     container_name: postgres
     environment:
       - POSTGRES_PASSWORD=pg2access
@@ -90,7 +81,7 @@ services:
         max-file: "10"
         compress: "true"
     ports:
-      - 5432:5432
+      - 55432:5432
     
     networks:
       - datams
