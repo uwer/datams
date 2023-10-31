@@ -2,7 +2,6 @@ from flask import Blueprint, redirect, render_template, request, url_for
 from flask_login import login_required
 from datams.db.views import (organization_root, organization_details, organization_edit,
                              organization_add, organization_delete)
-from datams.utils import APP_CONFIG
 
 bp = Blueprint('organization', __name__, url_prefix='/organization')
 
