@@ -23,6 +23,9 @@ services:
         compress: "true"
     ports:
       - "5000:80"
+    volumes:
+      - ":/var/lib/datams/uploads/submitted"
+      - ":/var/lib/datams/uploads/pending"
     depends_on:
       - redis
     networks:

@@ -71,7 +71,7 @@ def upload():
 @bp.route("/download/<fid>&<dl>", methods=('GET',))
 @login_required
 def download(fid, dl):
-    dl = True if dl is 'True' else False
+    dl = True if str(dl).lower() == 'true' else False
     data = file_download(fid)
     if not data:
         return redirect(request.referrer)
