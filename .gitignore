@@ -7,3 +7,4 @@ datams.egg-info
 uploads/*
 TODO.txt
 config.yml
+*datams/config.yml
