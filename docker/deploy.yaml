@@ -1,0 +1,95 @@
+version: "3.7"
+
+networks:
+  datams:
+    external: false
+    
+services:
+  webapi:
+    image: datams/ubuntu:22.04
+    build:
+      dockerfile: datams.dockerfile
+      
+    command: 
+      - "gunicorn --workers 3 --bind unix:datams.sock -m 007 wsgi:app"
+    environment:
+      REDISSERVER: redis://redis:6379
+      C_FORCE_ROOT: "true"
+    restart: always
+    logging:
+      options:
+        max-size: "100m"
+        max-file: "10"
+        compress: "true"
+    ports:
+      - "5000:80"
+    depends_on:
+      - redis
+    networks:
+      - datams
+      
+  worker:
+    image: datams/ubuntu:22.04
+    command:
+       - "celery --app make_celery worker --loglevel=DEBUG --pool=solo"
+    build:
+      dockerfile: datams.dockerfile
+    restart: always
+    logging:
+      options:
+        max-size: "100m"
+        max-file: "10"
+        compress: "true"
+    environment:
+      REDISSERVER: redis://redis:6379
+      C_FORCE_ROOT: "true"
+    depends_on:
+      - redis
+    networks:
+      - datams
+      
+  nginx:
+    image: datams/nginx
+    build:
+      dockerfile: nginx.dockerfile
+    restart: always
+    ports:
+      - "8088:80"
+    logging:
+      options:
+        max-size: "100m"
+        max-file: "10"
+        compress: "true"
+    networks:
+      - datams
+   
+  redis:
+    image: redis
+    container_name: redis
+    networks:
+      - datams
+    restart: always
+    logging:
+      options:
+        max-size: "100m"
+        max-file: "10"
+        compress: "true"
+      
+  postgres:
+    image: postgres/14-alpine 
+    container_name: postgres
+    environment:
+      - POSTGRES_PASSWORD=pg2access
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=datams
+    restart: always
+    logging:
+      options:
+        max-size: "100m"
+        max-file: "10"
+        compress: "true"
+    ports:
+      - 5432:5432
+    
+    networks:
+      - datams

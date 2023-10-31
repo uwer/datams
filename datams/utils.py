@@ -21,9 +21,12 @@ logging.basicConfig()
 log = logging.getLogger()
 log.setLevel(logging.DEBUG)
 
+DATAMS_CONFIG = "DATAMS_CONFIG"
+
 rootdir = os.path.dirname(os.path.realpath(__file__))
-with open(os.path.join(rootdir, "config.yml"), "r") as conf_file:
-    config = yaml.safe_load(conf_file)
+conf_file = os.getenv(DATAMS_CONFIG,os.path.join(rootdir, "config.yml"))
+with open(conf_file, "r") as conf_fp:
+    config = yaml.safe_load(conf_fp)
 
 APP_CONFIG = config['app']
 MAP_CONFIG = config['map']
