@@ -1,10 +1,10 @@
 # NOTE: All paths relative to root of repository
 app:
-  SECRET_KEY: db3421bc9711dec94555737f1726fb9e294140bcf35df2376d0b545b9fdc58ff
+  SECRET_KEY: dummy_key
   # generate a new key for signing session cookies
   USE_SESSION_FOR_NEXT: True 
   # used by login
-  GOOGLE_API_KEY: AIzaSyCcEI5C-3KXYHXPxM7zb2enzS_QlpSI-DQ
+  GOOGLE_API_KEY: dummy_key
   # Used by google map api for creating maps
   
   UPLOADS:
@@ -16,7 +16,7 @@ app:
     dialect: postgresql
     driver: psycopg2
     username: datams
-    password: datams_password
+    password: dummy_password
     host: '127.0.0.1'
     port: 5432
     database: datams
