@@ -6,3 +6,4 @@ dist
 datams.egg-info
 uploads/*
 TODO.txt
+datams/config.yml
