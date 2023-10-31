@@ -25,13 +25,13 @@ def get_redis(app: Flask = None) -> Redis:
 
 # TODO: Consider emitting a signal when dfiles set to let application know the result is
 #       ready
-def set_dfiles(dfiles: Union[pd.DataFrame, str]) -> None:
+def set_files(dfiles: Union[pd.DataFrame, str]) -> None:
     dfiles = dfiles.to_json() if type(dfiles) is pd.DataFrame else dfiles
     redis = get_redis()
     redis.set('dfiles', dfiles)
 
 
-def get_dfiles() -> pd.DataFrame:
+def get_files() -> pd.DataFrame:
     redis = get_redis()
     dfiles = redis.get('dfiles')
     empty = pd.DataFrame(columns=['id', 'level', 'owner', 'description', 'filename',

@@ -1,9 +1,9 @@
 import flask
-from datams.redis import get_dfiles
+from datams.redis import get_files
 
 
-# TODO: Put this in a different spot
-def request_dfiles(request: flask.Request):
+# TODO: Put this in a different spot?
+def request_files(request: flask.Request):
     # The draw counter that this object is a response to - from the draw parameter sent
     # as part of the data request. Note that it is strongly recommended for security
     # reasons that you cast this parameter to an integer, rather than simply echoing
@@ -50,7 +50,7 @@ def request_dfiles(request: flask.Request):
                 cargs = column_attributes.get(cidx, dict())
                 cargs[key] = False if v == 'false' else True
                 column_attributes[cidx] = cargs
-    df = get_dfiles()
+    df = get_files()
     df = df.drop(columns=['id'])
     search_value = request_values['search[value]']
     if search_value != '':

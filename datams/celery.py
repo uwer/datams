@@ -1,24 +1,24 @@
 from flask import Flask
 from celery import Celery, Task, shared_task
-from datams.redis import set_dfiles
+from datams.redis import set_files
 from datams.db.queries.select import select_files
 
 
 # define background tasks
 @shared_task(ignore_result=False)
-def get_dfiles_task():
+def get_files_task():
     df = select_files('file.root')
     return df.to_json()
 
 
 @shared_task
-def set_dfiles_task(result):
-    set_dfiles(result)
+def set_files_task(result):
+    set_files(result)
 
 
 def load_cache():
     # chain the tasks together so result is piped to the next task
-    chain = get_dfiles_task.s() | set_dfiles_task.s()
+    chain = get_files_task.s() | set_files_task.s()
     chain()
 
 

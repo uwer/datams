@@ -6,7 +6,7 @@ from flask import (Blueprint, render_template, request, redirect, url_for, send_
 from flask_login import login_required
 from datams.db.views import (file_root, file_details, file_edit, file_download,
                              file_add, file_delete)
-from datams.db.datatables import request_dfiles
+from datams.db.datatables import request_files
 from datams.utils import PENDING_UPLOAD_FOLDER
 from werkzeug.utils import secure_filename
 
@@ -86,7 +86,7 @@ def download(fid, dl):
 @bp.route("/datatable_request", methods=('GET',))
 @login_required
 def datatable_request():
-    return jsonify(request_dfiles(request))
+    return jsonify(request_files(request))
 
 
 @bp.route('/add', methods=('POST',))
