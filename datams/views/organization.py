@@ -45,7 +45,5 @@ def details(oid: int):
 @bp.route('/', methods=('GET',))
 @login_required
 def root():
-    v = APP_CONFIG['UPLOADS']['directory']
-    raise Exception
     data = organization_root()
     return render_template('organization/root.html', data=data)
