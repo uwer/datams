@@ -63,7 +63,7 @@ If this is not the correct location then it can be found using
 
 ### 6. Create the new database
 ```bash
-    sudo -u pstgres createdb datams
+    sudo -u postgres createdb datams
 ```
 
 ### 7. Log into postgres database as postgres user and create datams user and grant them priviledges on the new database

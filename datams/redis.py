@@ -1,3 +1,4 @@
+from io import StringIO
 import pandas as pd
 from flask import Flask, current_app, g
 from redis import Redis
@@ -35,7 +36,7 @@ def get_dfiles() -> pd.DataFrame:
     dfiles = redis.get('dfiles')
     empty = pd.DataFrame(columns=['id', 'level', 'owner', 'description', 'filename',
                                   'uploaded', 'url'])
-    return empty if dfiles is None else pd.read_json(dfiles)
+    return empty if dfiles is None else pd.read_json(StringIO(dfiles))
 
 
 def redis_init_app(app: Flask) -> Redis:

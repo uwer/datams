@@ -45,6 +45,11 @@ def initialize_db():
     Base.metadata.create_all(engine)
 
 
+def sync_table_models():
+    engine = conect_and_return_engine()
+    Base.metadata.create_all(engine)
+
+
 def result_to_df(result):
     return pd.DataFrame(result, columns=result.keys())
 

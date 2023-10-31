@@ -4,7 +4,8 @@ from flask import current_app, g
 from sqlalchemy.orm import Session
 
 from datams.db.utils import (conect_and_return_engine, initialize_db,
-                             create_upload_directories, result_to_df)
+                             sync_table_models, create_upload_directories,
+                             result_to_df)
 
 
 def query(statement):
@@ -85,6 +86,9 @@ def database_init_app(app):
 
     # create the engine to the database
     app.extensions['sqlalchemy_engine'] = conect_and_return_engine()
+
+    # ensure that the sqlalchemy orm models match the database
+    sync_table_models()
 
     app.cli.add_command(init_db_command)  # register the init-db command
     # TODO: app.teardown_appcontext(close_engine)?
