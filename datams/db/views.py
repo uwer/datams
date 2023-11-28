@@ -2,7 +2,7 @@ import flask
 import pandas as pd
 from functools import partial
 from datams.utils import move_pending_files
-from datams.celery import load_cache
+from datams.celery import load_processed_files, load_pending_files
 from datams.db.requests import parse_request
 from datams.db.utils import (mooring_add_equipment_html, mooring_files_add_section,
                              map_properties)
@@ -150,12 +150,12 @@ def deployment_edit(did: int, request: flask.Request):
     else:
         values = parse_request(request, table='Deployment', rtype='edit')
         update_query(table='Deployment', values=values, deployment_id=did)
-        load_cache()
+        load_processed_files()
 
 
 def deployment_delete(did):
     delete_query(table='Deployment', deployment_id=did)
-    load_cache()
+    load_processed_files()
 
 
 def file_root():
@@ -177,8 +177,13 @@ def file_details(fid):
 def file_add(request: flask.Request, session: flask.session):
     values = parse_request(request, table='File', rtype='add')
     insert_query(table='File', values=values)
-    move_pending_files(session)
-    load_cache()
+    # move_pending_files(session)
+    load_pending_files()
+
+
+def file_pending():
+    # TODO: Fill out this method
+    return None
 
 
 def file_edit(fid, request: flask.Request):
@@ -190,12 +195,12 @@ def file_edit(fid, request: flask.Request):
     else:
         values = parse_request(request, table='File', rtype='edit')
         update_query(table='File', values=values, file_id=fid)
-        load_cache()
+        load_processed_files()
 
 
 def file_delete(fid):
     delete_query(table='File', file_id=fid)
-    load_cache()
+    load_processed_files()
 
 
 def file_download(fid):
@@ -230,12 +235,12 @@ def equipment_edit(eid, request: flask.Request):
     else:
         values = parse_request(request, table='Equipment', rtype='edit')
         update_query(table='Equipment', values=values, equipment_id=eid)
-        load_cache()
+        load_processed_files()
 
 
 def equipment_delete(eid):
     delete_query(table='Equipment', equipment_id=eid)
-    load_cache()
+    load_processed_files()
 
 
 def mooring_root():
@@ -264,12 +269,12 @@ def mooring_edit(mid, request: flask.Request):
     else:
         values = parse_request(request, table='Mooring', rtype='edit')
         update_query(table='Mooring', values=values, mooring_id=mid)
-        load_cache()
+        load_processed_files()
 
 
 def mooring_delete(mid):
     delete_query(table='Mooring', mooring_id=mid)
-    load_cache()
+    load_processed_files()
 
 
 def organization_root():
@@ -301,9 +306,9 @@ def organization_edit(oid: int, request: flask.request):
     else:
         values = parse_request(request, table='Organization', rtype='edit')
         update_query(table='Organization', values=values, organization_id=oid)
-        load_cache()
+        load_processed_files()
 
 
 def organization_delete(oid):
     delete_query(table='Organization', organization_id=oid)
-    load_cache()
+    load_processed_files()

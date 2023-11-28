@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from datams.db.utils import (conect_and_return_engine, initialize_db,
                              sync_table_models, create_upload_directories,
-                             result_to_df)
+                             validate_discovery_directory, result_to_df)
 
 
 def query(statement):
@@ -80,9 +80,10 @@ def init_db_command():
 
 def database_init_app(app):
     # create the upload directories
-    upload_directories = [v for k, v in app.config['UPLOADS'].items()
-                          if k in {'directory', 'pending_directory'}]
-    create_upload_directories(upload_directories)
+    create_upload_directories(app.config['DATA_FILES']['upload_directory'])
+
+    # validate the discovery directory
+    validate_discovery_directory(app.config['DATA_FILES']['upload_directory'])
 
     # create the engine to the database
     app.extensions['sqlalchemy_engine'] = conect_and_return_engine()

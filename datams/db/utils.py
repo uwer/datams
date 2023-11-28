@@ -22,12 +22,22 @@ class MissingRequiredDataError(Exception):
         super().__init__(self.message)
 
 
-def create_upload_directories(paths):
-    for p in paths:
+def create_upload_directories(path):
+    for d in {'pending', 'processed', 'deleted'}:
         try:
-            os.makedirs(p, exist_ok=True)
+            os.makedirs(f"{path}/{d}", exist_ok=True)
         except OSError:
-            raise OSError(f"Failed to create directory `{p}` required for uploading.  ")
+            raise OSError(f"Failed to create directory `{path}/{d}` required for "
+                          f"uploading.  ")
+
+def validate_discovery_directory(path):
+    if not os.path.exists(path):
+        raise NotADirectoryError(f"Discovery directory, at `{path}` does not exist.")
+    elif os.path.isfile(path):
+        raise FileExistsError(f"Discovery directory, `{path}` must reference existing "
+                              f"directory instead of a file.  ")
+    return
+
 
 
 def generate_database_url(dialect, driver, username, password, host, port, database):

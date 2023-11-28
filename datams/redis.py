@@ -23,20 +23,47 @@ def get_redis(app: Flask = None) -> Redis:
         return Redis(**APP_CONFIG['REDIS'])
 
 
-# TODO: Consider emitting a signal when dfiles set to let application know the result is
-#       ready
-def set_files(dfiles: Union[pd.DataFrame, str]) -> None:
-    dfiles = dfiles.to_json() if type(dfiles) is pd.DataFrame else dfiles
+# TODO: Consider emitting a signal when processed_files or pending_files are set to let
+#       application know they are ready
+def set_processed_files(df: Union[pd.DataFrame, str]) -> None:
+    df = df.to_json() if type(df) is pd.DataFrame else df
     redis = get_redis()
-    redis.set('dfiles', dfiles)
+    redis.set('processed_files', df)
 
 
-def get_files() -> pd.DataFrame:
+def get_processed_files() -> pd.DataFrame:
     redis = get_redis()
-    dfiles = redis.get('dfiles')
+    df = redis.get('processed_files')
     empty = pd.DataFrame(columns=['id', 'level', 'owner', 'description', 'filename',
                                   'uploaded', 'url'])
-    return empty if dfiles is None else pd.read_json(StringIO(dfiles))
+    return empty if df is None else pd.read_json(StringIO(df))
+
+
+# TODO: Implement pending files and discovered files as pandas dataframes
+def set_pending_files(df: Union[pd.DataFrame, str]) -> None:
+    df = df.to_json() if type(df) is pd.DataFrame else df
+    redis = get_redis()
+    redis.set('pending_files', df)
+
+
+def get_pending_files() -> pd.DataFrame:
+    redis = get_redis()
+    df = redis.get('pending_files')
+    empty = pd.DataFrame(columns=['file', 'last_modified'])
+    return empty if df is None else pd.read_json(StringIO(df))
+
+
+def set_discovered_files(df: Union[pd.DataFrame, str]) -> None:
+    df = df.to_json() if type(df) is pd.DataFrame else df
+    redis = get_redis()
+    redis.set('discovered_files', df)
+
+
+def get_discovered_files() -> pd.DataFrame:
+    redis = get_redis()
+    df = redis.get('discovered_files')
+    empty = pd.DataFrame(columns=['file', 'last_modified'])
+    return empty if df is None else pd.read_json(StringIO(df))
 
 
 def redis_init_app(app: Flask) -> Redis:

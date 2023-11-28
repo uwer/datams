@@ -1,14 +1,15 @@
 import os
-import random
-import string
 from flask import (Blueprint, render_template, request, redirect, url_for, send_file,
                    jsonify, make_response, session)
 from flask_login import login_required
 from datams.db.views import (file_root, file_details, file_edit, file_download,
-                             file_add, file_delete)
+                             file_add, file_delete, file_pending)
 from datams.db.datatables import request_files
-from datams.utils import PENDING_UPLOAD_FOLDER
+from datams.celery import load_pending_files
+from datams.utils import PENDING_DIRECTORY
 from werkzeug.utils import secure_filename
+
+from datams.redis import get_pending_files, get_discovered_files
 
 
 import logging
@@ -20,18 +21,44 @@ log.setLevel(logging.DEBUG)
 bp = Blueprint('file', __name__, url_prefix='/file')
 
 
+def is_pending(file):
+    df = get_pending_files()
+    df['file'] = df['file'].apply(lambda x: os.path.basename(x))
+    if file in list(df['file']):
+        p = True
+    else:
+        p = any(
+            [True for f in df['file']
+             if f.endswith(file) and
+             f.startswith('.temp') and
+             len(f) == (len(file) + 23)]  # 23 is length of prepended portion of
+                                          # partially downloaded files
+        )
+    return p
+
+
+# @bp.route("/resolve_filename/<file>", methods=('GET',))
+# @login_required
+def resolve_filename(file):
+    i = 0
+    f = secure_filename(file)
+    while is_pending(f):
+        f = secure_filename(file)
+        fl = f.split('.')
+        f = secure_filename(
+            f"{'.'.join(fl[:-1])}_{i}.{fl[-1]}" if len(fl) > 1 else f"{f}_{i}"
+        )
+        i += 1
+    return f
+
+
 # TODO: look into using celery with parallel chunk downloading to speed things up
 @bp.route("/upload", methods=('POST',))
 @login_required
 def upload():
-    if 'identity' not in session:
-        session['identity'] = ''.join(
-            random.choices(string.ascii_letters + string.digits, k=16)
-        )
-
     file = request.files['file']
     save_path = os.path.join(
-        PENDING_UPLOAD_FOLDER, f"{session['identity']}_{secure_filename(file.filename)}"
+        PENDING_DIRECTORY, f".temp.{session['identity']}.{secure_filename(file.filename)}"
     )
     current_chunk = int(request.form['dzchunkindex'])
 
@@ -61,7 +88,11 @@ def upload():
                       f" expected {request.form['dztotalfilesize']} ")
             return make_response(('Size mismatch', 500))
         else:
-            log.info(f'File {file.filename} has been uploaded successfully')
+            parent, _ = os.path.split(save_path)
+            filename = resolve_filename(file.filename)
+            load_pending_files(PENDING_DIRECTORY)
+            os.rename(save_path, f"{parent}/{filename}")
+            log.info(f'File {filename} has been uploaded successfully')
     else:
         log.debug(f'Chunk {current_chunk + 1} of {total_chunks} '
                   f'for file {file.filename} complete')
@@ -92,8 +123,21 @@ def datatable_request():
 @bp.route('/add', methods=('POST',))
 @login_required
 def add():
+    # TODO: Check that the files have finished uploading
+    #       - do this by putting temp in name until it is completed.
+    #       - if session, temp in name remove the file
+
+    #       this can be done via checking all the files that
     file_add(request, session)
     return redirect(request.referrer)
+
+
+@bp.route('/pending', methods=('GET', 'POST'))
+@login_required
+def pending():
+    # data = file_pending()
+    data = dict(files=get_discovered_files())
+    return render_template('file/pending.html', data=data)
 
 
 @bp.route('/delete/<fid>', methods=('POST',))

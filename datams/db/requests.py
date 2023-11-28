@@ -2,7 +2,7 @@ from typing import Dict
 import flask
 from werkzeug.utils import secure_filename
 from datams.utils import (fileobj_to_jpgbytes, datetimestr_to_timestamp,
-                          current_timestamp, UPLOAD_FOLDER)
+                          current_timestamp, PROCESSED_DIRECTORY)
 
 from datams.db.utils import MissingRequiredDataError
 from datams.db.queries.select import select_mooring_equipment_id, next_deployment_id
@@ -82,7 +82,7 @@ def fetch_associations(request, associations):
 
 
 def uploaded_filepath(value: str):
-    return [f"{UPLOAD_FOLDER}/{secure_filename(f)}" for f in value.split(',')]
+    return [f"{PROCESSED_DIRECTORY}/{secure_filename(f)}" for f in value.split(',')]
 
 
 def extract_user_fields(request, strict):

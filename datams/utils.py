@@ -44,10 +44,13 @@ APP_CONFIG = config['app']
 MAP_CONFIG = config['map']
 MENU_CONFIG = config['menu']
 
-ALLOWED_UPLOAD_EXTENSIONS = APP_CONFIG['UPLOADS']['allowed_extensions']
-UPLOAD_FOLDER = APP_CONFIG['UPLOADS']['directory']
-PENDING_UPLOAD_FOLDER = APP_CONFIG['UPLOADS']['pending_directory']
+upload_dir = APP_CONFIG['DATA_FILES']['upload_directory']
+DISCOVERY_DIRECTORY = APP_CONFIG['DATA_FILES']['discovery_directory']
+ALLOWED_UPLOAD_EXTENSIONS = APP_CONFIG['DATA_FILES']['allowed_extensions']
 
+PENDING_DIRECTORY = f"{upload_dir}/pending/"
+PROCESSED_DIRECTORY = f"{upload_dir}/processed/"
+DELETED_DIRECTORY = f"{upload_dir}/deleted/"
 
 utc_offsets = sorted(
     list(range(-12, 15)) +  # regular offsets
@@ -73,6 +76,7 @@ def current_timestamp():
 
 
 def allowed_upload(file):
+    # TODO: Implement this using regular expression
     return '.' in file and file.lower().split('.')[-1] in ALLOWED_UPLOAD_EXTENSIONS
 
 
@@ -107,11 +111,11 @@ def save_fileobj(file_obj, path):
 
 def move_pending_files(session):
     identity = session['identity']
-    for f in os.listdir(PENDING_UPLOAD_FOLDER):
+    for f in os.listdir(PENDING_DIRECTORY):
         if f.startswith(identity):
             shutil.move(
-                os.path.join(PENDING_UPLOAD_FOLDER, f),
-                os.path.join(UPLOAD_FOLDER, f[17:])
+                os.path.join(PENDING_DIRECTORY, f),
+                os.path.join(PROCESSED_DIRECTORY, f[17:])
             )
 
 

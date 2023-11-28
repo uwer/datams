@@ -1,5 +1,5 @@
 import flask
-from datams.redis import get_files
+from datams.redis import get_processed_files
 
 
 # TODO: Put this in a different spot?
@@ -50,7 +50,7 @@ def request_files(request: flask.Request):
                 cargs = column_attributes.get(cidx, dict())
                 cargs[key] = False if v == 'false' else True
                 column_attributes[cidx] = cargs
-    df = get_files()
+    df = get_processed_files()
     df = df.drop(columns=['id'])
     search_value = request_values['search[value]']
     if search_value != '':
