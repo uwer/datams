@@ -1,7 +1,10 @@
+import os
+import datetime as dt
+from pathlib import Path
 import pandas as pd
 from sqlalchemy import select, text, func, literal_column, String
 
-from datams.utils import MENU_CONFIG, TIMEZONES
+from datams.utils import MENU_CONFIG, TIMEZONES, DISCOVERY_DIRECTORY, PENDING_DIRECTORY
 from datams.db.core import query_df, query_first_df, query_first
 from datams.db.tables import (
     Contact, Country, Deployment, DeploymentContact, DeploymentOrganization, File,
@@ -37,6 +40,10 @@ def select_query(data, **kwargs):
         return select_dfiles(**kwargs)
     elif data == 'mfile':
         return select_mfiles(**kwargs)
+    elif data == 'pending_files':
+        return select_pending_files()
+    elif data == 'discovered_files':
+        return select_discovered_files()
     elif data == 'equipment':
         return select_equipment(**kwargs)
     elif data == 'mooring':
@@ -81,6 +88,34 @@ def _get_file_level(file_id):
 def next_deployment_id():
     stmt = text(f'''SELECT last_value FROM "Deployment_id_seq";''')
     return int(query_first_df(stmt)['last_value'])
+
+
+def select_pending_files():
+    data = [
+        (str(f),
+         dt.datetime.fromtimestamp(os.path.getmtime(f)).strftime('%Y-%m-%d %H:%M:%S'))
+        for f in Path(PENDING_DIRECTORY).rglob('*') if f.is_file()
+    ]
+    files = [f for f, _ in data]
+    last_modifies = [mt for _, mt in data]
+    return pd.DataFrame({'file': files, 'last_modified': last_modifies})
+
+
+def select_discovered_files():
+    touched_files = []
+    normal_files = set([
+        str(f) if not str(f).endswith('.touch') else touched_files.append(str(f)[:-6])
+        for f in Path(DISCOVERY_DIRECTORY).rglob('*')
+        if f.is_file()
+    ])
+    if None in normal_files:
+        normal_files.remove(None)
+    files = sorted(list(normal_files.difference(touched_files)))
+    last_modifies = [
+        dt.datetime.fromtimestamp(os.path.getmtime(f)).strftime('%Y-%m-%d %H:%M:%S')
+        for f in files
+    ]
+    return pd.DataFrame({'file': files, 'last_modified': last_modifies})
 
 
 def select_mooring_equipment_id(mooring_id: int, equipment_id: int):

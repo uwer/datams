@@ -8,28 +8,55 @@
 {% endblock %}
 
 {% block table %}
-<ul class="nav nav-tabs">
-  <li class="nav-item">
-    <a class="nav-link active" aria-current="page" href="{{ url_for('file.root') }}">Processed</a>
-  </li>
-  <li class="nav-item">
-    <a class="nav-link" href="{{ url_for('file.pending') }}">Pending</a>
-  {#</li>
-    <li class="nav-item">
-    <a class="nav-link" href="{{ url_for('file.deleted') }}">Deleted</a>
-  </li>#}
-</ul>
-{{ components.table('fileTable', data['files']) }}
+{#
+TODO: Add a paragraph or two of instructions on how this all works
+      Could inherit from a single template for both this and pending_root
+#}
+<nav>
+  <div class="nav nav-tabs" id="nav-tab" role="tablist">
+    <button class="nav-link active" id="nav-processed-tab" data-bs-toggle="tab" data-bs-target="#nav-processed" type="button" role="tab" aria-controls="nav-processed" aria-selected="true">Processed</button>
+    <button class="nav-link" id="nav-pending-uploads-tab" data-bs-toggle="tab" data-bs-target="#nav-pending-uploads" type="button" role="tab" aria-controls="nav-pending-uploads" aria-selected="false">Pending Uploads</button>
+    <button class="nav-link" id="nav-pending-discoveries-tab" data-bs-toggle="tab" data-bs-target="#nav-pending-discoveries" type="button" role="tab" aria-controls="nav-pending-discoveries" aria-selected="false">Pending Discoveries</button>
+    <button class="nav-link" id="nav-deleted-tab" data-bs-toggle="tab" data-bs-target="#nav-deleted" type="button" role="tab" aria-controls="nav-deleted" aria-selected="false">Deleted</button>
+  </div>
+</nav>
+<div class="tab-content" id="nav-tabContent">
+  <div class="tab-pane fade show active" id="nav-processed" role="tabpanel" aria-labelledby="nav-processed-tab">
+     <button id="processButton" class="btn btn-success" type="button" onclick="processSelected('processedFileTable')"><b>Process Selected</b></button>
+     <button id="deleteButton" class="btn btn-danger" type="button" onclick="deleteSelected('processedFileTable')"><b>Delete Selected</b></button>
+     <button id="refreshButton" class="btn btn-primary ms-5" type="button" onclick="refreshList('processedFileTable')"><b>Refresh List</b></button>
+    {{ components.table('processedFileTable', data['files']) }}
+  </div>
+  <div class="tab-pane fade" id="nav-pending-uploads" role="tabpanel" aria-labelledby="nav-pending-uploads-tab">
+    <div class="d-block pt-2">
+      <button id="processButton" class="btn btn-success" type="button" onclick="processSelected('pendingFileTable')"><b>Process Selected</b></button>
+      <button id="deleteButton" class="btn btn-danger" type="button" onclick="deleteSelected('pendingFileTable')"><b>Delete Selected</b></button>
+      <button id="refreshButton" class="btn btn-primary ms-5" type="button" onclick="refreshList('pendingFileTable')"><b>Refresh List</b></button>
+    </div>
+    {{ components.table('pendingFileTable', data['pending_files']) }}
+  </div>
+  <div class="tab-pane fade" id="nav-pending-discoveries" role="tabpanel" aria-labelledby="nav-pending-discoveries-tab">
+    <div class="d-block pt-2">
+      <button id="processButton" class="btn btn-success" type="button" onclick="processSelected('discoveredFileTable')"><b>Process Selected</b></button>
+      <button id="deleteButton" class="btn btn-danger" type="button" onclick="deleteSelected('discoveredFileTable')"><b>Delete Selected</b></button>
+      <button id="refreshButton" class="btn btn-primary ms-5" type="button" onclick="refreshList('discoveredFileTable')"><b>Refresh List</b></button>
+    </div>
+    {{ components.table('discoveredFileTable', data['discovered_files']) }}
+  </div>
+  <div class="tab-pane fade" id="nav-deleted" role="tabpanel" aria-labelledby="nav-deleted-tab">...</div>
+</div>
 {% endblock %}
 
 {% block modal %}
     {{ components.modal('fileAddModal', 'Add Files', file.add(), size='xl') }}
+    {{ components.modal('fileProcessModal', 'Process Files', file.process(), size='xl') }}
 {% endblock %}
 
 {% block scripts %}
-{% set server = url_for('file.datatable_request') %}
-{{ scripts.format_table('fileTable', dom="flipt", paging=True, pagelength=25, serverside=server) }}
-{# {{ scripts.set_form_options() }} #}
+{{ scripts.set_form_options() }}
+{{ scripts.format_table('processedFileTable', dom="flipt", paging=True, pagelength=25, serverside=url_for('file.processed_datatable')) }}
+{{ scripts.format_table('pendingFileTable', dom="fliBpt", paging=True, lengthmenu=[[25, 50, 100, -1], [25, 50, 100, "All"]], pagelength=25, selectable=True) }}
+{{ scripts.format_table('discoveredFileTable', dom="fliBpt", paging=True, lengthmenu=[[25, 50, 100, -1], [25, 50, 100, "All"]], pagelength=25, selectable=True, serverside=url_for('file.discovered_datatable')) }}
 <script type="application/javascript">
 Dropzone.autoDiscover = false;
 var myDropzone = new Dropzone("div#fileDropzone", {
@@ -42,6 +69,16 @@ var myDropzone = new Dropzone("div#fileDropzone", {
     paramName: "file",
     createImageThumbnails: true,
     addRemoveLinks: true,
+    renameFile: function(file) {
+      return "temp.{{ data['uploads_id'] }}." + file.name
+    },
+    /*headers: {
+      uploads_id: "{{ data['uploads_id'] }}"
+    },*/
+    // This seems to mess with the chunking
+    /*params: {
+      uploads_id: "{{ data['uploads_id'] }}"
+    },*/
   
     init: function () {
     var _this = this;
@@ -62,6 +99,7 @@ var myDropzone = new Dropzone("div#fileDropzone", {
     },
 });
 
+{#
 $('button#submitButton').click(function() {
   console.log(myDropzone.files);
   let files = [];
@@ -72,29 +110,45 @@ $('button#submitButton').click(function() {
   }
   $('input#files').prop('value', files.join());
 });
+#}
 
 
 async function resolveFilenameJSON(filename) {
   var response = await fetch('process_filename/' + filename);
   var newfile = await response.json();
-  return newfile.file;
+  {return newfile.file};
 }
 
-//let submitButton = document.getElementById("submitButton");
+function getSelections(tid) {
+  let table = tables.get(tid);
+  let selections = table.rows({ selected: true, filter: 'none'}).indexes()
+  console.log(selections);
+  return selections;
+}
 
-/*Dropzone.options.dfileDropzone = {
-    url: "{{ url_for('file.upload') }}",
-    parallelUploads: 2,
-    chunking: true,
-    forceChunking: true,
-    chunkSize: 2000000,
-    maxFilesize: 2048,
-    paramName: "file",
-    createImageThumbnails: true,
-    addRemoveLinks: true,
-};
-*/
-/*Dropzone.options.dfileDropzone = {
+function deleteSelected(tid) {
+  //TODO: Finish method
+  selections = getSelections(tid);
+}
+function processSelected(tid) {
+  //TODO: Finish method
+  selections = getSelections(tid);
+  
+}
+function refreshList(tid) {
+  if (tid == 'discoveredFileTable'){
+    // call method to load the discovery files
+    // put the spinner on until it completes
+  }
+  if (tid == 'processedFileTable'){
+    // call method to load the processed files
+    // put the spinner on until it completes
+  }
+}
+/*
+DEFAULT DROPZONE OPTIONS
+------------------------
+
     url: "{{ url_for('file.upload') }}",
     method: "post",
     withCredentials: false,
@@ -135,7 +189,8 @@ async function resolveFilenameJSON(filename) {
     capture: null,
     renameFilename: null,
     renameFile: null,
-    forceFallback: false
-};*/
+    forceFallback: false,
+
+*/
 </script>
 {% endblock %}

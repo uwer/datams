@@ -1,8 +1,9 @@
+import datetime as dt
 import flask
 import pandas as pd
 from functools import partial
 from datams.utils import move_pending_files
-from datams.celery import load_processed_files, load_pending_files
+from datams.celery import load_processed_files
 from datams.db.requests import parse_request
 from datams.db.utils import (mooring_add_equipment_html, mooring_files_add_section,
                              map_properties)
@@ -48,6 +49,8 @@ def fetch_data(requested_data, **kwargs):
         ofiles=partial(select_query, data='ofile', **kwargs),
         dfiles=partial(select_query, data='dfile', **kwargs),
         mfiles=partial(select_query, data='mfile', **kwargs),
+        pending_files=partial(select_query, data='pending_files', **kwargs),
+        discovered_files=partial(select_query, data='discovered_files', **kwargs),
         equipment=partial(select_query, data='equipment', **kwargs),
         moorings=partial(select_query, data='mooring', **kwargs),
         mooring=partial(select_query, data='mooring', **kwargs),
@@ -158,14 +161,29 @@ def deployment_delete(did):
     load_processed_files()
 
 
+# def file_root_orig():
+#     kwargs = dict(view='file.root')
+#     data_to_fetch = ['all_organizations', 'all_deployments', 'all_moorings',
+#                      'all_equipment', 'all_levels', 'all_descriptions']
+#     data = fetch_data(data_to_fetch, **kwargs)
+#     # don't actually pull files (it's too slow)
+#     data['files'] = pd.DataFrame(columns=['level', 'owner', 'description', 'filename',
+#                                           'uploaded', 'url'])
+#     return data
+
+
 def file_root():
     kwargs = dict(view='file.root')
-    data_to_fetch = ['all_organizations', 'all_deployments', 'all_moorings',
-                     'all_equipment', 'all_levels', 'all_descriptions']
+    data_to_fetch = ['pending_files', 'all_organizations', 'all_deployments',
+                     'all_moorings', 'all_equipment', 'all_levels', 'all_descriptions']
     data = fetch_data(data_to_fetch, **kwargs)
-    # don't actually pull files (it's too slow)
+    data['uploads_id'] = f"{dt.datetime.now().timestamp():10.6f}".replace('.', '')
+
+    # don't actually pull files or discovered_files (it's too slow), instead create an
+    # empty dataframe placeholder
     data['files'] = pd.DataFrame(columns=['level', 'owner', 'description', 'filename',
                                           'uploaded', 'url'])
+    data['discovered_files'] = pd.DataFrame(columns=['file', 'last_modified'])
     return data
 
 
@@ -174,16 +192,11 @@ def file_details(fid):
     return fetch_data(['file'], **kwargs)
 
 
-def file_add(request: flask.Request, session: flask.session):
-    values = parse_request(request, table='File', rtype='add')
-    insert_query(table='File', values=values)
-    # move_pending_files(session)
-    load_pending_files()
-
-
-def file_pending():
-    # TODO: Fill out this method
-    return None
+# def file_add(request: flask.Request, session: flask.session):
+#     values = parse_request(request, table='File', rtype='add')
+#     insert_query(table='File', values=values)
+#     # move_pending_files(session)
+#     load_pending_files()
 
 
 def file_edit(fid, request: flask.Request):

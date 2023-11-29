@@ -83,7 +83,7 @@ function resize_contents() {
   } */
 }
 
-function format_table(tid, dom, paging, pagelength, header, highlight, serverside) {
+function format_table(tid, dom, paging, pagelength, lengthmenu, header, highlight, selectable, serverside) {
   //For additional references see: https://datatables.net/examples/styling/bootstrap5.html
   
   // Check table header to see if the last column is 'url' if it is then we hide it set the onclick methods
@@ -94,14 +94,38 @@ function format_table(tid, dom, paging, pagelength, header, highlight, serversid
   if (url) {
     columnDefs.push({ target: -1, searchable: false, sortable: false, visible: false, searchable: false});
   }
+  if (selectable) {
+    var buttons = [
+        {
+            "text": 'Select All',
+            "extend": 'selectAll',
+            "selectorModifier": {
+                "search": 'applied'
+            }
+        },
+        {
+            "text": 'Select Page',
+            "extend": 'selectAll',
+            "selectorModifier": function () {
+                return {page: 'current'}
+            }
+        },
+        'selectNone'
+    ];
+  } else {
+    var buttons = [];
+  }
+  
   if (serverside == "") {
     // initialize table
     var table = new DataTable(
       '#' + tid, {
           "dom": dom,
           "paging": paging,
-          "lengthMenu": [10, 25, 50, 100],
+          "select": selectable,
+          "lengthMenu": lengthmenu,
           "pageLength": pagelength,
+          "buttons": buttons,
           // "stateSave": true,  // turn this off when changing other options to make debugging easier
           "columnDefs": columnDefs,
       }
@@ -113,8 +137,10 @@ function format_table(tid, dom, paging, pagelength, header, highlight, serversid
           "ajax": serverside,
           "dom": dom,
           "paging": paging,
-          "lengthMenu": [10, 25, 50, 100],
+          "select": selectable,
+          "lengthMenu": lengthmenu,
           "pageLength": pagelength,
+          "buttons": buttons,
           // "stateSave": true,  // turn this off when changing other options to make debugging easier
           "columnDefs": columnDefs,
       }
@@ -136,10 +162,15 @@ function format_table(tid, dom, paging, pagelength, header, highlight, serversid
   }
 
   // highlight row and make cursor pointer when hovered if chosen
-  if (highlight) {
+  if (highlight && !selectable) {
     table.on('mouseenter', 'td', highlight_row);
     table.on('mouseleave', 'td', unhighlight_row);
   }
+  
+  if (selectable) {
+    table.cells().nodes().each((el) => el.classList.add('selectable'));
+  }
+  
   document.getElementById(tid + '_loader').classList.add('d-none');
   document.getElementById(tid).classList.remove('d-none');
 }

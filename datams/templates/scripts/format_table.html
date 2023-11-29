@@ -5,10 +5,12 @@ Parameters
 `dom`: str 't'
 `paging`: bool false
 `pagelength`: int 10
+`lengthmenu`: List[int] [10, 25, 50, 100]
 `header`: bool true
 `highlight`: bool true
+`selectable`: bool false
 `serverside`: str ''
 #}
 <script>
-  format_table("{{ id }}", "{{ dom }}", {{ paging|string|lower }}, {{ pagelength }}, {{ header|string|lower }}, {{ highlight|string|lower }}, "{{ serverside }}");
+  format_table("{{ id }}", "{{ dom }}", {{ paging|string|lower }}, {{ pagelength }}, {{ lengthmenu|safe }}, {{ header|string|lower }}, {{ highlight|string|lower }}, {{ selectable|string|lower }}, "{{ serverside }}");
 </script>

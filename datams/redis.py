@@ -39,20 +39,20 @@ def get_processed_files() -> pd.DataFrame:
     return empty if df is None else pd.read_json(StringIO(df))
 
 
-# TODO: Implement pending files and discovered files as pandas dataframes
-def set_pending_files(df: Union[pd.DataFrame, str]) -> None:
-    df = df.to_json() if type(df) is pd.DataFrame else df
-    redis = get_redis()
-    redis.set('pending_files', df)
-
-
-def get_pending_files() -> pd.DataFrame:
-    redis = get_redis()
-    df = redis.get('pending_files')
-    empty = pd.DataFrame(columns=['file', 'last_modified'])
-    return empty if df is None else pd.read_json(StringIO(df))
-
-
+# TODO: Uncomment if calls to extract this data is too slow
+# def set_pending_files(df: Union[pd.DataFrame, str]) -> None:
+#     df = df.to_json() if type(df) is pd.DataFrame else df
+#     redis = get_redis()
+#     redis.set('pending_files', df)
+#
+#
+# def get_pending_files() -> pd.DataFrame:
+#     redis = get_redis()
+#     df = redis.get('pending_files')
+#     empty = pd.DataFrame(columns=['file', 'last_modified'])
+#     return empty if df is None else pd.read_json(StringIO(df))
+#
+#
 def set_discovered_files(df: Union[pd.DataFrame, str]) -> None:
     df = df.to_json() if type(df) is pd.DataFrame else df
     redis = get_redis()

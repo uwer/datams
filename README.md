@@ -190,3 +190,9 @@ If this is not the correct location then it can be found using
    - implment viewer priviledges by creating custom decorating similar to the @login_required decorated
      that checks if user.role < 2.  Also should disable or hide the buttons to access these areas from this type of user
    - table to log user actions to see how system is being used
+
+
+$ flask --app datams run --debug
+$ flask --app datams init-db
+$ gunicorn --bind 127.0.0.1:5000 wsgi:app
+$ celery --app make_celery worker --loglevel=DEBUG --pool=solo

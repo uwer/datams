@@ -67,6 +67,10 @@ td.highlight {
   font-size: 1.1em;
 }
 
+.selectable {
+  cursor: pointer;
+}
+
 .section_contents {
   background-color: rgb(245,245,245);
   
