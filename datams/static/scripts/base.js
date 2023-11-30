@@ -85,7 +85,7 @@ function resize_contents() {
 
 function format_table(tid, dom, paging, pagelength, lengthmenu, header, highlight, selectable, serverside) {
   //For additional references see: https://datatables.net/examples/styling/bootstrap5.html
-  
+
   // Check table header to see if the last column is 'url' if it is then we hide it set the onclick methods
   // console.log(document.getElementById(tid).children[0].children[0].children);
   let headers = document.getElementById(tid).children[0].children[0].children;
@@ -168,6 +168,7 @@ function format_table(tid, dom, paging, pagelength, lengthmenu, header, highligh
   }
   
   if (selectable) {
+    //This only works with datatables that are not doing any server-side computation
     table.cells().nodes().each((el) => el.classList.add('selectable'));
   }
   

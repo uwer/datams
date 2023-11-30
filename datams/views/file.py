@@ -1,13 +1,13 @@
 import os
 import datetime as dt
 from flask import (Blueprint, render_template, request, redirect, url_for, send_file,
-                   jsonify, make_response, session)
+                   jsonify, make_response, g)
 from flask_login import login_required, current_user
+from datams.redis import set_alive
 from datams.db.views import (file_root, file_details, file_edit, file_download,
                              file_delete)  # file_add, file_pending
 from datams.db.datatables import processed_files, discovered_files
-# from datams.celery import load_pending_files
-from datams.utils import PENDING_DIRECTORY
+from datams.utils import PENDING_DIRECTORY, REMOVE_STALES_EVERY
 from werkzeug.utils import secure_filename
 
 # from datams.redis import get_pending_files, get_discovered_files
@@ -21,38 +21,15 @@ log.setLevel(logging.DEBUG)
 bp = Blueprint('file', __name__, url_prefix='/file')
 
 
-# def _is_pending():
-#     # TODO: Does the following need to be a background process or can we just do it
-#     #       adhoc
-#     df = pending_files
-#     df['file'] = df['file'].apply(lambda x: os.path.basename(x))
-#     if f in list(df['file']):
-#         p = True
-#     else:
-#         p = any(
-#             [True for i in df['file']
-#              if i.endswith(f) and
-#              i.startswith('.temp') and
-#              len(f) == (len(f) + 32)]  # 32 is length of prepended portion of
-#             # partially downloaded files
-#         )
-#     return p
-
-
-def exists(filename, directory):
-    return filename in os.listdir(directory)
-
-
 def resolve_filename(filename, directory):
     i = 0
     new_filename = filename
-    while exists(new_filename, directory):
+    while new_filename in os.listdir(directory):
         fl = filename.split('.')
-        new_filename = secure_filename(
-            f"{'.'.join(fl[:-1])}_{i}.{fl[-1]}" if len(fl) > 1 else f"{filename}_{i}"
-        )
+        new_filename = (f"{'.'.join(fl[:-1])} ({i}).{fl[-1]}"
+                        if len(fl) > 1 else f"{filename} ({i})")
         i += 1
-    return f"{directory}/{new_filename}"
+    return new_filename
 
 
 # TODO: look into using celery with parallel chunk downloading to speed things up
@@ -62,12 +39,9 @@ def resolve_filename(filename, directory):
 @login_required
 def upload():
     file = request.files['file']
-    # save_path = os.path.join(
-    #     PENDING_DIRECTORY, f".temp.{session['identity']}.{secure_filename(file.filename)}"
-    # )
     save_path = os.path.join(
         PENDING_DIRECTORY,
-        secure_filename(file.filename)
+        f".{secure_filename(file.filename)}"
     )
     log.debug(save_path)
     current_chunk = int(request.form['dzchunkindex'])
@@ -96,11 +70,6 @@ def upload():
                       f" expected {request.form['dztotalfilesize']} ")
             return make_response(('Size mismatch', 500))
         else:
-            # TODO: Remove the renaming into the submit button
-            # parent, _ = os.path.split(save_path)
-            # filename = resolve_filename(file.filename)
-            # load_pending_files(PENDING_DIRECTORY)
-            # os.rename(save_path, f"{parent}/{filename}")
             filename = os.path.basename(save_path)
             log.info(f'File {filename} has been uploaded successfully')
     else:
@@ -109,28 +78,38 @@ def upload():
     return make_response(("Chunk upload successful", 200))
 
 
+@bp.route('/check_in', methods=('POST',))
+@login_required
+def check_in():
+    set_alive((request.form['uploads_id'], dt.datetime.now().timestamp()))
+    return make_response(("Successful check-in", 200))
+
+
 @bp.route('/submit', methods=('POST',))
 @login_required
 def submit():
-    uploads_id = request.form['uploads_id']
-    pending_files = [f"{PENDING_DIRECTORY}/{i}" for i in os.listdir(PENDING_DIRECTORY)
-                     if i.startswith(f"temp.{uploads_id}.")]
-    for f in pending_files:
-        parent, filename = os.path.split(f)
-        f_new = resolve_filename(filename[32:], parent)
-        os.rename(f, f_new)
+    # Check that the user portion of the uploads_id matches the current user
+    if current_user.username == request.form['uploads_id'].split('.')[0]:
+        uploads_id = request.form['uploads_id']
+        pending_files = [i for i in os.listdir(PENDING_DIRECTORY)
+                         if i.startswith(f".temp.{uploads_id}.")]
+        for f in pending_files:
+            f_new = resolve_filename(f[6:], PENDING_DIRECTORY)
+            os.rename(f"{PENDING_DIRECTORY}/{f}", f"{PENDING_DIRECTORY}/{f_new}")
     return redirect(request.referrer)
 
 
 @bp.route('/cancel', methods=('POST',))
 @login_required
 def cancel():
-    # TODO: Get this working in add.html modal
-    uploads_id = request.form['uploads_id']
-    pending_files = [f"{PENDING_DIRECTORY}/{i}" for i in os.listdir(PENDING_DIRECTORY)
-                     if i.startswith(f"temp.{uploads_id}.")]
-    for f in pending_files:
-        os.remove(f)
+    # Check that the user portion of the uploads_id matches the current user
+    if current_user.username == request.form['uploads_id'].split('.')[0]:
+        uploads_id = request.form['uploads_id']
+        pending_files = [f"{PENDING_DIRECTORY}/{i}"
+                         for i in os.listdir(PENDING_DIRECTORY)
+                         if i.startswith(f".temp.{uploads_id}.")]
+        for f in pending_files:
+            os.remove(f)
     return redirect(request.referrer)
 
 
@@ -169,12 +148,9 @@ def details(fid: int):
 @bp.route('/', methods=('GET',))
 @login_required
 def root():
-    # TODO: Add a unique identifier (i.e.) user and timestamp to be passed to the
-    #       template so this can be used to remove cancelled files etc.
-    #       (do this instead of using session[identity] this will solve issues of using
-    #       multiple tabs)
     data = file_root()
-    data['uploads_id'] = f"{current_user.id}".zfill(10) + data['uploads_id']
+    log.debug(current_user.username)
+    data['uploads_id'] = f"{current_user.username}.{data['timestamp_str']}"
     return render_template('file/root.html', data=data)
 
 

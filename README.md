@@ -191,8 +191,8 @@ If this is not the correct location then it can be found using
      that checks if user.role < 2.  Also should disable or hide the buttons to access these areas from this type of user
    - table to log user actions to see how system is being used
 
-
+$ celery --app make_celery worker --loglevel=DEBUG --pool=solo
+$ celery --app make_celery beat
 $ flask --app datams run --debug
 $ flask --app datams init-db
 $ gunicorn --bind 127.0.0.1:5000 wsgi:app
-$ celery --app make_celery worker --loglevel=DEBUG --pool=solo

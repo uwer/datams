@@ -1,7 +1,4 @@
-import datetime as dt
-import os
-
-from flask import Flask, redirect, url_for, request_started, session, request
+from flask import Flask, redirect, url_for
 import pandas as pd
 
 from datams.utils import APP_CONFIG
@@ -19,28 +16,21 @@ def flask_init_app(name, test_config=None):
 
     # 3) add callbacks connected to application signals
     # @app.before_request
-    # def set_session_identity():
-    #     if 'identity' not in session:
-    #         session['identity'] = (f"{dt.datetime.now().timestamp():10.6f}"
-    #                                .replace('.', ''))
+    # def before_request():
+    #     # do something
+    #    ...
+    # @request_started.connect_via(app)
+    # def when_request_started(_, **kwargs):
+    #     # do something
 
-    # @app.before_request
-    # def clear_partial_pending():
-    #     if request.path != '/file/upload':
-    #         identity = session.get('identity', None)
-    #         if identity is not None:
-    #             pending_dir = f"{app.config['DATA_FILES']['upload_directory']}/pending"
-    #             to_remove = [f"{pending_dir}/{f}" for f in os.listdir(pending_dir)
-    #                          if f.startswith(f".temp.{identity}.")]
-    #             for f in to_remove:
-    #                 os.remove(f)
-
-    # 4) set globally available variables for templates
+    # 4) set globally available variables
     @app.context_processor
-    def set_global_template_variables():
+    def set_global_variables():
         return dict(
             google_api_key=app.config['GOOGLE_API_KEY'],
-            pd=pd
+            pd=pd,
+            # set the polling frequency to twice as often as the remove_stales
+            polling_freq=round(app.config['DATA_FILES']['remove_stales_every'] * 500),
         )
 
     # 5) add the root route

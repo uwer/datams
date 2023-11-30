@@ -4,7 +4,8 @@ from pathlib import Path
 import pandas as pd
 from sqlalchemy import select, text, func, literal_column, String
 
-from datams.utils import MENU_CONFIG, TIMEZONES, DISCOVERY_DIRECTORY, PENDING_DIRECTORY
+from datams.utils import (MENU_CONFIG, TIMEZONES, DISCOVERY_DIRECTORY,
+                          PENDING_DIRECTORY, DELETED_DIRECTORY)
 from datams.db.core import query_df, query_first_df, query_first
 from datams.db.tables import (
     Contact, Country, Deployment, DeploymentContact, DeploymentOrganization, File,
@@ -44,6 +45,8 @@ def select_query(data, **kwargs):
         return select_pending_files()
     elif data == 'discovered_files':
         return select_discovered_files()
+    elif data == 'deleted_files':
+        return select_deleted_files()
     elif data == 'equipment':
         return select_equipment(**kwargs)
     elif data == 'mooring':
@@ -91,14 +94,23 @@ def next_deployment_id():
 
 
 def select_pending_files():
-    data = [
-        (str(f),
-         dt.datetime.fromtimestamp(os.path.getmtime(f)).strftime('%Y-%m-%d %H:%M:%S'))
-        for f in Path(PENDING_DIRECTORY).rglob('*') if f.is_file()
+    files = [f for f in os.listdir(PENDING_DIRECTORY)
+             if os.path.isfile(f"{PENDING_DIRECTORY}/{f}") and
+             not f.startswith('.temp')]
+    # last_modifies = [
+    #     dt.datetime.fromtimestamp(
+    #         os.path.getmtime(f"{PENDING_DIRECTORY}/{f}")
+    #     ).strftime('%Y-%m-%d %H:%M:%S') for f in files
+    # ]
+    uploaded = [
+        dt.datetime.fromtimestamp(
+            float(f"{f.split('.')[1][:-6]}.{f.split('.')[1][-6:]}")
+        ).strftime('%Y-%m-%d %H:%M:%S') for f in files
     ]
-    files = [f for f, _ in data]
-    last_modifies = [mt for _, mt in data]
-    return pd.DataFrame({'file': files, 'last_modified': last_modifies})
+    uploaded_bys = [f.split('.')[0] for f in files]
+    files = ['.'.join(f.split('.')[2:]) for f in files]
+    return pd.DataFrame({'filename': files, 'uploaded': uploaded,
+                         'uploaded_by': uploaded_bys})
 
 
 def select_discovered_files():
@@ -115,7 +127,22 @@ def select_discovered_files():
         dt.datetime.fromtimestamp(os.path.getmtime(f)).strftime('%Y-%m-%d %H:%M:%S')
         for f in files
     ]
-    return pd.DataFrame({'file': files, 'last_modified': last_modifies})
+    return pd.DataFrame({'filename': files, 'last_modified': last_modifies})
+
+
+def select_deleted_files():
+    files = [f for f in os.listdir(DELETED_DIRECTORY)
+             if os.path.isfile(f"{DELETED_DIRECTORY}/{f}")]
+    deleted = [
+        dt.datetime.fromtimestamp(
+            float(f"{f.split('.')[1][:-6]}.{f.split('.')[1][-6:]}")
+        ).strftime('%Y-%m-%d %H:%M:%S') for f in files
+    ]
+    deleted_bys = [f.split('.')[0] for f in files]
+    uploaded_bys = [f.split('.')[2] for f in files]
+    files = ['.'.join(f.split('.')[2:]) for f in files]
+    return pd.DataFrame({'filename': files, 'deleted': deleted, 'deleted_by': deleted_bys,
+                         'originally_uploaded_by': uploaded_bys})
 
 
 def select_mooring_equipment_id(mooring_id: int, equipment_id: int):

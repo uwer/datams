@@ -209,6 +209,7 @@ class Organization(Base):
 class User(Base, UserMixin):
     __tablename__ = 'User'
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    username: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     password: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[int]  # 0 is admin, 1 is editor, 2 is viewer

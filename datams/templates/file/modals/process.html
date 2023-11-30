@@ -2,7 +2,7 @@
   <div class="col-md-6">
     <label for="level" class="form-label">Level</label>
     <select name="level" id="level" class="form-select" required onchange="levelChanged()">
-    <option value="" selected disabled hidden>Choose...</option>
+    <option id='level_default_option' value="unowned" selected disabled hidden>Choose...</option>
     {% for i in data['all_levels']%}
       <option value="{{ i }}">{{ i.replace('_', ' ').title() }}</option>
     {% endfor %}
@@ -11,7 +11,7 @@
   <div class="col-md-6">
     <label for="description" class="form-label">Description</label>
     <select name="description" id="description" class="form-select" required>
-      <option value="" selected disabled hidden>Choose...</option>
+      <option id='description_default_option' value="" selected disabled hidden>Choose...</option>
       {% for i in data['all_descriptions']%}
       <option value="{{ i }}">{{ i }}</option>
       {% endfor %}
@@ -20,7 +20,7 @@
   <div class="col-md-12 d-none">
     <label for="organization_id" class="form-label">Organization</label>
     <select name="organization_id" id="organization_id" class="form-select" onchange="organizationChanged()">
-      <option value="" selected disabled hidden>Choose...</option>
+      <option id='organization_default_option' value="" selected disabled hidden>Choose...</option>
       {% for _, i in data['all_organizations'].iterrows()%}
       <option value="{{ i['id'] }}">{{ i['name'] }}</option>
       {% endfor %}
@@ -29,27 +29,29 @@
   <div class="col-md-12 d-none">
     <label for="deployment_id" class="form-label">Deployment</label>
     <select name="deployment_id" id="deployment_id" class="form-select" onchange="deploymentChanged()">
-      <option value="" selected disabled hidden>Choose...</option>
+      <option id='deployment_default_option' value="" selected disabled hidden>Choose...</option>
     </select>
   </div>
   <div class="col-md-12 d-none">
     <label for="mooring_id" class="form-label">Mooring</label>
     <select name="mooring_id" id="mooring_id" class="form-select" onchange="mooringChanged()">
-      <option value="" selected disabled hidden>Choose...</option>
+      <option id='mooring_default_option' value="" selected disabled hidden>Choose...</option>
     </select>
   </div>
   <div class="col-md-12 d-none">
     <label for="equipment_id" class="form-label">Equipment</label>
     <select name="equipment_id" id="equipment_id" class="form-select">
-      <option value="" selected disabled hidden>Choose...</option>
+      <option id='equipment_default_option' value="" selected disabled hidden>Choose...</option>
     </select>
   </div>
   <div class="col-md-12">
     <label for="comments" class="form-label">Comments</label>
     <input type="textarea" class="form-control" name="comments" id="comments">
   </div>
+  <input type="hidden" id="file_set" name="file_set" value="">
+  <input type="hidden" id="ids_selected" name="ids_selected" value="">
   <div class="col-md-2">
-    <button id="submitButton" type="submit" class="btn btn-primary" disabled>Submit</button>
+    <button id="submitButton" type="submit" class="btn btn-primary">Submit</button>
   </div>
   <div class="col-md-2">
     <button id="cancelButton" type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>

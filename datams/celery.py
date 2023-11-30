@@ -1,10 +1,14 @@
+import os
+import datetime as dt
 from flask import Flask
 from celery import Celery, Task, shared_task
-from datams.redis import set_processed_files, set_discovered_files  # set_pending_files
+from datams.redis import set_processed_files, set_discovered_files, get_alive
 from datams.db.queries.select import select_files, select_discovered_files
+from datams.utils import PENDING_DIRECTORY, REMOVE_STALES_EVERY
 
 
 # define background tasks
+# TODO: Consider renaming this compute_processed_files_task
 @shared_task(ignore_result=False)
 def get_processed_files_task():
     df = select_files('file.root')
@@ -16,12 +20,7 @@ def set_processed_files_task(result):
     set_processed_files(result)
 
 
-def load_processed_files():
-    # chain the tasks together so result is piped to the next task
-    chain = get_processed_files_task.s() | set_processed_files_task.s()
-    chain()
-
-
+# TODO: Consider renaming this compute_discovered_files_task
 @shared_task(ignore_result=False)
 def get_discovered_files_task():
     df = select_discovered_files()
@@ -33,10 +32,18 @@ def set_discovered_files_task(result):
     set_discovered_files(result)
 
 
-def load_discovered_files():
-    # chain the tasks together so result is piped to the next task
-    chain = (get_discovered_files_task.s() | set_discovered_files_task.s())
-    chain()
+@shared_task
+def remove_stales_task():
+    now = dt.datetime.now().timestamp()
+    alive = get_alive()
+    alive = [a[0] for a in alive if (now - a[1]) < REMOVE_STALES_EVERY]
+    temp_files = [f for f in os.listdir(PENDING_DIRECTORY)
+                  if (os.path.isfile(f"{PENDING_DIRECTORY}/{f}") and
+                      f.startswith('.temp'))]
+    to_remove = [f"{PENDING_DIRECTORY}/{f}" for f in temp_files
+                 if '.'.join(f[6:].split('.')[:2]) not in alive]
+    for f in to_remove:
+        os.remove(f)
 
 
 # TODO: Uncomment if these should be implemented as background tasks
@@ -61,6 +68,18 @@ def load_discovered_files():
 #
 #
 
+def load_processed_files():
+    # chain the tasks together so result is piped to the next task
+    chain = get_processed_files_task.s() | set_processed_files_task.s()
+    chain()
+
+
+def load_discovered_files():
+    # chain the tasks together so result is piped to the next task
+    chain = (get_discovered_files_task.s() | set_discovered_files_task.s())
+    chain()
+
+
 def celery_init_app(app: Flask) -> Celery:
     # 1) define flask/celery task object to share context variables
     class FlaskTask(Task):
@@ -81,9 +100,20 @@ def celery_init_app(app: Flask) -> Celery:
     # 4) start background task of discovering files
     load_discovered_files()
 
-    # 5) start background task of loading pending files
+    # 5) start period task of removing stale files
+    celery_app.conf.beat_schedule = {
+        'remove_stale_pending_files': {
+            'task': 'datams.celery.remove_stales_task',
+            'schedule': app.config['DATA_FILES']['remove_stales_every'],
+            # 'args': (PENDING_DIRECTORY,)
+        },
+    }
+
+    # 6) start background task of loading pending files
     # load_pending_files(f"{app.config['DATA_FILES']['upload_directory']}/pending")
 
     # TODO: Follow similar pattern for loading deleted files?
+    # 7) start background task of loading pending files
+    # load_pending_files(f"{app.config['DATA_FILES']['upload_directory']}/pending")
 
     return celery_app

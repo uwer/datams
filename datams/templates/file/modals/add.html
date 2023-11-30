@@ -1,21 +1,18 @@
-<form class="row g-3" method="POST" action="{{ url_for('file.submit') }}">
-  <div id="fileDropzone" class="dropzone" required></div>
-  <input type="hidden" id="uploads_id" name="uploads_id" value="{{ data['uploads_id'] }}">
-  <div class="col-md-2">
-    <button id="submitButton" type="submit" class="btn btn-primary" disabled>Submit</button>
-  </div>
-  <div class="col-md-2">
-    <button id="cancelButton" type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="window.location.href='{{ url_for("file.cancel") }}'">Cancel</button>
-  </div>
-</form>
+<div class='d-block'>
+  <form id="submitForm" method="POST" action="{{ url_for('file.submit') }}">
+    <div id="fileDropzone" class="dropzone" required></div>
+    <input type="hidden" id="uploads_id" name="uploads_id" value="{{ data['uploads_id'] }}">
+  </form>
+  <form id="cancelForm" method="POST" action="{{ url_for('file.cancel') }}">
+    <input type="hidden" id="uploads_id" name="uploads_id" value="{{ data['uploads_id'] }}">
+  </form>
+</div>
+<div class="d-block pt-2">
+  <button id="submitButton" type="submit" class="btn btn-primary" form="submitForm" disabled>Submit</button>
+  <button id="cancelButton" type="submit" class="btn btn-secondary" data-bs-dismiss="modal" form="cancelForm">Cancel</button>
+</div>
 
-{# TODO: The cancel button should:
-    
-    - stop all uploading
-    - remove any files from pending that have been uploaded, just now by the session user (therefore maybe these should not be renamed until 
-                                                                                           submit has been pressed)
-    - removing them could be preformed by making a request other than upload
-    - if user opens multiple tabs to do other things while files are uploading this is going to cause problems therefore instead of a session
-      maybe the route instance should be used then this would 
-  
+{#
+   How to deal with the case where the user unexpected becomes disconnected?
+     - should treat this as a cancel
 #}

@@ -39,6 +39,13 @@ with open(os.path.join(rootdir, "config.yml"), "r") as conf_file:
     config = yaml.safe_load(conf_file)
     config = expand_environmental_variables(config)
 
+# TODO: Enforce these for certain things such as deployment, mooring, organization, user
+#       names.
+ALLOWED_CHARACTERS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
+                      'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+                      'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+                      'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+                      '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '_', '-']
 
 APP_CONFIG = config['app']
 MAP_CONFIG = config['map']
@@ -51,6 +58,7 @@ ALLOWED_UPLOAD_EXTENSIONS = APP_CONFIG['DATA_FILES']['allowed_extensions']
 PENDING_DIRECTORY = f"{upload_dir}/pending/"
 PROCESSED_DIRECTORY = f"{upload_dir}/processed/"
 DELETED_DIRECTORY = f"{upload_dir}/deleted/"
+REMOVE_STALES_EVERY = APP_CONFIG['DATA_FILES']['remove_stales_every']  # in seconds
 
 utc_offsets = sorted(
     list(range(-12, 15)) +  # regular offsets

@@ -51,6 +51,7 @@ def fetch_data(requested_data, **kwargs):
         mfiles=partial(select_query, data='mfile', **kwargs),
         pending_files=partial(select_query, data='pending_files', **kwargs),
         discovered_files=partial(select_query, data='discovered_files', **kwargs),
+        deleted_files=partial(select_query, data='deleted_files', **kwargs),
         equipment=partial(select_query, data='equipment', **kwargs),
         moorings=partial(select_query, data='mooring', **kwargs),
         mooring=partial(select_query, data='mooring', **kwargs),
@@ -174,10 +175,11 @@ def deployment_delete(did):
 
 def file_root():
     kwargs = dict(view='file.root')
-    data_to_fetch = ['pending_files', 'all_organizations', 'all_deployments',
-                     'all_moorings', 'all_equipment', 'all_levels', 'all_descriptions']
+    data_to_fetch = ['pending_files', 'deleted_files', 'all_organizations',
+                     'all_deployments', 'all_moorings', 'all_equipment', 'all_levels',
+                     'all_descriptions']
     data = fetch_data(data_to_fetch, **kwargs)
-    data['uploads_id'] = f"{dt.datetime.now().timestamp():10.6f}".replace('.', '')
+    data['timestamp_str'] = f"{dt.datetime.now().timestamp():10.6f}".replace('.', '')
 
     # don't actually pull files or discovered_files (it's too slow), instead create an
     # empty dataframe placeholder
