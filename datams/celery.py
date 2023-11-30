@@ -1,83 +1,58 @@
-import os
-import datetime as dt
+from typing import Tuple
 from flask import Flask
 from celery import Celery, Task, shared_task
-from datams.redis import set_processed_files, set_discovered_files, get_alive
-from datams.db.queries.select import select_files, select_discovered_files
-from datams.utils import PENDING_DIRECTORY, REMOVE_STALES_EVERY
+
+from datams.redis import get_value, set_value, acquire_lock, release_lock, is_locked
+from datams.utils import remove_stale_files, update_and_append_to_checkins
+from datams.db.queries.select import select_query
+
+#  Note in order to know if value is ready application can check if the
+#  `<key>_lock` key exists.  If it doesn't then it should be ready.  Otherwise
+#  it is currently being computed and set
+
+
+def requires_lock(function, ignore_when_locked=False):
+    def wrapper(*args, lock=None, **kwargs):
+        if lock is None:
+            raise RuntimeError('Lock key required')
+        if not ignore_when_locked or not is_locked(lock):
+            acquire_lock(lock)
+            function(*args, **kwargs)
+            release_lock(lock)
+    return wrapper
 
 
 # define background tasks
-# TODO: Consider renaming this compute_processed_files_task
-@shared_task(ignore_result=False)
-def get_processed_files_task():
-    df = select_files('file.root')
-    return df.to_json()
+@shared_task
+@requires_lock(ignore_when_locked=True)
+def compute_and_set_task(key) -> None:
+    # FIXME: Currently this method assumes all data coming from select_query is a pandas
+    #        Dataframe.
+    try:
+        # if key is not implemented, release the lock and ignore the request
+        value = select_query(data=key).to_json()
+        set_value(key, value)
+    except NotImplementedError:
+        pass
 
 
 @shared_task
-def set_processed_files_task(result):
-    set_processed_files(result)
-
-
-# TODO: Consider renaming this compute_discovered_files_task
-@shared_task(ignore_result=False)
-def get_discovered_files_task():
-    df = select_discovered_files()
-    return df.to_json()
+@requires_lock
+def update_checkins(value: Tuple[str, float]) -> None:
+    checkins = get_value('checkins')
+    updated_checkins = update_and_append_to_checkins(checkins, value)
+    set_value(checkins, str(updated_checkins))
 
 
 @shared_task
-def set_discovered_files_task(result):
-    set_discovered_files(result)
+@requires_lock
+def remove_stale_files_task() -> None:
+    checkins = get_value('checkins')
+    remove_stale_files(checkins)
 
 
-@shared_task
-def remove_stales_task():
-    now = dt.datetime.now().timestamp()
-    alive = get_alive()
-    alive = [a[0] for a in alive if (now - a[1]) < REMOVE_STALES_EVERY]
-    temp_files = [f for f in os.listdir(PENDING_DIRECTORY)
-                  if (os.path.isfile(f"{PENDING_DIRECTORY}/{f}") and
-                      f.startswith('.temp'))]
-    to_remove = [f"{PENDING_DIRECTORY}/{f}" for f in temp_files
-                 if '.'.join(f[6:].split('.')[:2]) not in alive]
-    for f in to_remove:
-        os.remove(f)
-
-
-# TODO: Uncomment if these should be implemented as background tasks
-# @shared_task(ignore_result=False)
-# def get_pending_files_task(pending_directory):
-#     data = [(str(f), dt.datetime.fromtimestamp(os.path.getmtime(f))) for f in
-#             Path(pending_directory).rglob('*') if f.is_file()]
-#     files = [f for f, _ in data]
-#     last_modifies = [mt for _, mt in data]
-#     return pd.DataFrame({'file': files, 'last_modified': last_modifies}).to_json()
-#
-#
-# @shared_task
-# def set_pending_files_task(result):
-#     set_pending_files(result)
-#
-#
-# def load_pending_files(pending_directory):
-#     # chain the tasks together so result is piped to the next task
-#     chain = get_pending_files_task.s(pending_directory) | set_pending_files_task.s()
-#     chain()
-#
-#
-
-def load_processed_files():
-    # chain the tasks together so result is piped to the next task
-    chain = get_processed_files_task.s() | set_processed_files_task.s()
-    chain()
-
-
-def load_discovered_files():
-    # chain the tasks together so result is piped to the next task
-    chain = (get_discovered_files_task.s() | set_discovered_files_task.s())
-    chain()
+def task_complete(key) -> bool:
+    return False if is_locked(key) else True
 
 
 def celery_init_app(app: Flask) -> Celery:
@@ -94,26 +69,38 @@ def celery_init_app(app: Flask) -> Celery:
     celery_app.set_default()
     app.extensions['celery'] = celery_app
 
-    # 3) start background task of loading processed files
-    load_processed_files()
+    # 3) start background task of computing and setting processed files
+    compute_and_set_task.delay('processed_files', lock='processed_files')
 
     # 4) start background task of discovering files
-    load_discovered_files()
+    compute_and_set_task.delay('discovered_files', lock='discovered_files')
 
     # 5) start period task of removing stale files
     celery_app.conf.beat_schedule = {
         'remove_stale_pending_files': {
-            'task': 'datams.celery.remove_stales_task',
+            'task': 'datams.celery.remove_stale_files_task',
             'schedule': app.config['DATA_FILES']['remove_stales_every'],
             # 'args': (PENDING_DIRECTORY,)
+            'kwargs': dict(lock='remove_stale_files')
         },
     }
 
-    # 6) start background task of loading pending files
-    # load_pending_files(f"{app.config['DATA_FILES']['upload_directory']}/pending")
-
-    # TODO: Follow similar pattern for loading deleted files?
-    # 7) start background task of loading pending files
-    # load_pending_files(f"{app.config['DATA_FILES']['upload_directory']}/pending")
-
+    # TODO: May want to follow similar pattern for loading pending and deleted files?
     return celery_app
+
+# EXAMPLE OF HOW TO CHAIN TOGETHER MULTIPLE TASKS
+# @shared_task(ignore_result=False)
+# def task_1(arg):
+#     result = step_1(arg)
+#     return result
+#
+#
+# @shared_task
+# def task_2(result):
+#     step_2(result)
+#
+#
+# def chain_together_task1_and_task2(arg):
+#     # chain the tasks together so result is piped to the next task
+#     chain = task_1.s(arg) | task_2.s()
+#     chain()

@@ -13,9 +13,6 @@ from xml.etree import ElementTree
 import seaborn as sns
 import yaml
 
-import pandas as pd
-from werkzeug.utils import secure_filename
-
 import logging
 logging.basicConfig()
 log = logging.getLogger()
@@ -77,6 +74,27 @@ TIMEZONES = dict(
     }
 )
 TIMEZONES_R = {str(float(v)): k for k, v in TIMEZONES.items()}
+
+
+def update_and_append_to_checkins(checkins, value):
+    now = dt.datetime.now().timestamp()
+    upload_id, timestamp = value
+    checkins = [(uid, ts) for uid, ts in checkins if uid != upload_id and
+                (now - ts) < REMOVE_STALES_EVERY]  # remove old entries
+    checkins.append(value)  # append the value
+    return checkins
+
+
+def remove_stale_files(checkins):
+    now = dt.datetime.now().timestamp()
+    checkins = [a[0] for a in checkins if (now - a[1]) < REMOVE_STALES_EVERY]
+    temp_files = [f for f in os.listdir(PENDING_DIRECTORY)
+                  if (os.path.isfile(f"{PENDING_DIRECTORY}/{f}") and
+                      f.startswith('.temp'))]
+    to_remove = [f"{PENDING_DIRECTORY}/{f}" for f in temp_files
+                 if '.'.join(f[6:].split('.')[:2]) not in checkins]
+    for f in to_remove:
+        os.remove(f)
 
 
 def current_timestamp():

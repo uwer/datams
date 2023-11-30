@@ -2,7 +2,7 @@ from io import StringIO
 import pandas as pd
 from flask import Flask, current_app, g
 from redis import Redis
-from typing import Union  # , Optional
+from typing import Union, Any
 from datams.utils import APP_CONFIG, REMOVE_STALES_EVERY
 import datetime as dt
 import time
@@ -13,11 +13,12 @@ logging.basicConfig()
 log = logging.getLogger()
 log.setLevel(logging.DEBUG)
 
+# interval between attempts to acquire lock
+RETRY_INTERVAL = dict(checkins=0.05, default=0.05)  # seconds
+# should only be relevant thread crashes
+LOCK_EXPIRY = dict(checkins=10, default=60)  # seconds
 
-ALIVE_RETRY_INTERVAL = 0.05  # seconds
-ALIVE_LOCK_EXPIRY = 10  # this should only comes into play if a thread crashes
 
-# TODO: Consider adding locks to other set methods
 def get_redis(app: Flask = None) -> Redis:
     try:
         if app is None:
@@ -30,81 +31,61 @@ def get_redis(app: Flask = None) -> Redis:
         return Redis(**APP_CONFIG['REDIS'])
 
 
-# TODO: Consider emitting a signal when processed_files or pending_files are set to let
-#       application know they are ready
-def set_processed_files(df: Union[pd.DataFrame, str]) -> None:
-    df = df.to_json() if type(df) is pd.DataFrame else df
+def is_locked(key: str):
+    # return True if key is locked otherwise return False
     redis = get_redis()
-    redis.set('processed_files', df)
+    return True if redis.exists(f"{key}_lock") == 1 else False
 
 
-def get_processed_files() -> pd.DataFrame:
+def acquire_lock(key: str):
+    retry_interval = RETRY_INTERVAL.get(key, RETRY_INTERVAL['default'])
+    lock_expiry = LOCK_EXPIRY.get(key, LOCK_EXPIRY['default'])
     redis = get_redis()
-    df = redis.get('processed_files')
-    empty = pd.DataFrame(columns=['id', 'level', 'owner', 'description', 'filename',
-                                  'uploaded', 'url'])
-    return empty if df is None else pd.read_json(StringIO(df))
-
-
-# TODO: Uncomment if calls to extract this data is too slow
-# def set_pending_files(df: Union[pd.DataFrame, str]) -> None:
-#     df = df.to_json() if type(df) is pd.DataFrame else df
-#     redis = get_redis()
-#     redis.set('pending_files', df)
-#
-#
-# def get_pending_files() -> pd.DataFrame:
-#     redis = get_redis()
-#     df = redis.get('pending_files')
-#     empty = pd.DataFrame(columns=['file', 'last_modified'])
-#     return empty if df is None else pd.read_json(StringIO(df))
-#
-#
-def set_discovered_files(df: Union[pd.DataFrame, str]) -> None:
-    df = df.to_json() if type(df) is pd.DataFrame else df
-    redis = get_redis()
-    redis.set('discovered_files', df)
-
-
-def get_discovered_files() -> pd.DataFrame:
-    redis = get_redis()
-    df = redis.get('discovered_files')
-    empty = pd.DataFrame(columns=['file', 'last_modified'])
-    return empty if df is None else pd.read_json(StringIO(df))
-
-
-def get_alive() -> pd.DataFrame:
-    redis = get_redis()
-    alive = redis.get('alive')
-    alive = [] if alive is None else eval(alive)  # convert from str to list
-    return alive
-
-
-# TODO: Consider renaming this append or push to alive instead.
-#       Consider using redis list type instead
-def set_alive(value):
-    """
-    If reset is True and value is not None then the list is reset before appending the
-    value.
-    """
-    upload_id, timestamp = value
-    redis = get_redis()
-    locked = True if redis.exists('alive_lock') == 1 else False
     while True:
+        locked = True if redis.exists(f"{key}_lock") == 1 else False
         if locked:
-            time.sleep(ALIVE_RETRY_INTERVAL)
+            time.sleep(retry_interval)
         else:
             # 1. set the lock
-            redis.set('alive_lock', 'y', dt.timedelta(seconds=ALIVE_LOCK_EXPIRY))
-            now = dt.datetime.now().timestamp()
-            alive = get_alive()
-            alive = [(uid, ts) for uid, ts in alive if uid != upload_id and
-                     (now - ts) < REMOVE_STALES_EVERY]  # remove old entries
-            alive.append(value)  # append the value
-            redis.set('alive', str(alive))
-            # 2. release the lock
-            redis.delete('alive_lock')
+            redis.set(f"{key}_lock", 'y', dt.timedelta(seconds=lock_expiry))
             break
+    return
+
+
+def release_lock(key: str):
+    redis = get_redis()
+    if redis.exists(f"{key}_lock") == 1:
+        redis.delete(f"{key}_lock")
+    return
+
+
+def set_value(key, value) -> None:
+    # locking is preformed within the celery tasks that call this method
+    # it is assumed that caller has acquired the lock before calling this method
+    redis = get_redis()
+    redis.set(key, value)
+
+
+def get_value(key) -> Any:
+    redis = get_redis()
+    key_conversion_default = dict(
+        processed_files=(lambda x: pd.read_json(StringIO(x)),
+                         pd.DataFrame(columns=['id', 'level', 'owner', 'description',
+                                               'filename', 'uploaded', 'url'])),
+        discovered_files=(lambda x: pd.read_json(StringIO(x)),
+                          pd.DataFrame(columns=['filename', 'last_modified'])),
+        checkins=(eval, []),
+        pending_files=(lambda x: pd.read_json(StringIO(x)),
+                       pd.DataFrame(columns=['filename', 'uploaded', 'uploaded_by'])),
+        deleted_files=(lambda x: pd.read_json(StringIO(x)),
+                       pd.DataFrame(columns=['filename', 'deleted', 'deleted_by',
+                                             'originally_uploaded_by']))
+    )
+    if key not in key_conversion_default.keys():
+        raise RuntimeError(f"Attempting to get unknown key: `{key}`")
+    conversion, default = key_conversion_default[key]
+    value = redis.get(key)
+    return default if value is None else conversion(value)
 
 
 def redis_init_app(app: Flask) -> Redis:

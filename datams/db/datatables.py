@@ -1,5 +1,5 @@
 import flask
-from datams.redis import get_processed_files, get_discovered_files
+from datams.redis import get_value  # get_processed_files, get_discovered_files
 import logging
 
 logging.basicConfig()
@@ -56,7 +56,7 @@ def processed_files(request: flask.Request):
                 cargs = column_attributes.get(cidx, dict())
                 cargs[key] = False if v == 'false' else True
                 column_attributes[cidx] = cargs
-    df = get_processed_files()
+    df = get_value('processed_files')
     df = df.drop(columns=['id'])
     search_value = request_values['search[value]']
     if search_value != '':
@@ -99,7 +99,7 @@ def processed_files(request: flask.Request):
 
 
 def discovered_files(request: flask.Request):
-    cmap = {0: 'file', 1: 'last_modified'}
+    cmap = {0: 'filename', 1: 'last_modified'}
     icmap = {v: k for k, v in cmap.items()}
 
     request_values = request.values
@@ -123,7 +123,7 @@ def discovered_files(request: flask.Request):
                 cargs = column_attributes.get(cidx, dict())
                 cargs[key] = False if v == 'false' else True
                 column_attributes[cidx] = cargs
-    df = get_discovered_files()
+    df = get_value('discovered_files')
     search_value = request_values['search[value]']
     if search_value != '':
         for i in ['.', '+', '?', '^', '$', '|', '&']:

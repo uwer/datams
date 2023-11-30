@@ -3,13 +3,14 @@ import datetime as dt
 from flask import (Blueprint, render_template, request, redirect, url_for, send_file,
                    jsonify, make_response, g)
 from flask_login import login_required, current_user
-from datams.redis import set_alive
+from datams.celery import update_checkins, compute_and_set_task, task_complete
 from datams.db.views import (file_root, file_details, file_edit, file_download,
                              file_delete)  # file_add, file_pending
 from datams.db.datatables import processed_files, discovered_files
 from datams.utils import PENDING_DIRECTORY, REMOVE_STALES_EVERY
 from werkzeug.utils import secure_filename
 
+# from datams.redis import update_alive
 # from datams.redis import get_pending_files, get_discovered_files
 import logging
 
@@ -78,10 +79,11 @@ def upload():
     return make_response(("Chunk upload successful", 200))
 
 
-@bp.route('/check_in', methods=('POST',))
+@bp.route('/checkin', methods=('POST',))
 @login_required
-def check_in():
-    set_alive((request.form['uploads_id'], dt.datetime.now().timestamp()))
+def checkin():
+    update_checkins((request.form['uploads_id'], dt.datetime.now().timestamp()),
+                    lock='checkins')
     return make_response(("Successful check-in", 200))
 
 
@@ -116,8 +118,7 @@ def cancel():
 @bp.route('/process', methods=('POST',))
 @login_required
 def process():
-    # TODO: Implement this
-    # this will cancel and remove all un-submitted uploads
+    # TODO: Implement this will take the information it needs from the form
     return redirect(request.referrer)
 
 
@@ -154,6 +155,26 @@ def root():
     return render_template('file/root.html', data=data)
 
 
+# TODO: Come up with strategy to determine if the files need to be recomputed.
+#       for now if it is already recomputing then request is ignored
+# TODO: Combine the various requests to recompute into a single route that takes the
+#       resource as an argument
+# The routes below are used to execute background tasks
+@bp.route("/refresh/<ftype>", methods=('GET',))
+@login_required
+def refresh(ftype):
+    compute_and_set_task.delay(ftype, lock=ftype)
+    return make_response(("Request for refresh submitted", 200))
+
+
+@bp.route("/ready/<ftype>", methods=('GET',))
+@login_required
+def ready(ftype):
+    is_ready = task_complete(ftype)
+    return jsonify(dict(ready=is_ready))
+
+
+# The routes below provide server-side options for datatables
 @bp.route("/processed_datatable", methods=('GET',))
 @login_required
 def processed_datatable():

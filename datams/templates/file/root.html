@@ -83,7 +83,7 @@ TODO: Add a paragraph or two of instructions on how this all works
 {{ scripts.format_table('deletedFileTable', dom="fliBpt", paging=True, lengthmenu=[[25, 50, 100, -1], [25, 50, 100, "All"]], pagelength=25, selectable=True) }}
 <script type="application/javascript">
 
-catchSelections();
+monitorSelections();
 
 function selectionChanged(e, dt, type, indexes) {
   let tid = e.currentTarget.id;
@@ -108,7 +108,7 @@ function selectionChanged(e, dt, type, indexes) {
   
 }
 
-function catchSelections() {
+function monitorSelections() {
   let processed_file_table = tables.get('processedFileTable');
   let pending_file_table = tables.get('pendingFileTable');
   let discovered_file_table = tables.get('discoveredFileTable');
@@ -123,6 +123,17 @@ function catchSelections() {
   pending_file_table.on('deselect', selectionChanged);
   discovered_file_table.on('deselect', selectionChanged);
   deleted_file_table.on('deselect', selectionChanged);
+}
+
+checkIn();
+
+// should this function be async?
+function checkIn() {
+    let xhttp = new XMLHttpRequest();
+    xhttp.open('POST', "{{ url_for('file.checkin') }}", true);
+    xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+    xhttp.send("uploads_id={{ data['uploads_id'] }}");
+    setTimeout(keepAlive, {{ polling_freq }});
 }
 
 Dropzone.autoDiscover = false;
@@ -153,21 +164,25 @@ var myDropzone = new Dropzone("div#fileDropzone", {
     },
 });
 
-keepAlive();
-
-function keepAlive() {
-    let xhttp = new XMLHttpRequest();
-    xhttp.open('POST', "{{ url_for('file.check_in') }}", true);
-    xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-    xhttp.send("uploads_id={{ data['uploads_id'] }}");
-    setTimeout(keepAlive, {{ polling_freq }});
-}
-
 function getSelections(tid) {
   let table = tables.get(tid);
   let selections = table.rows({ selected: true, filter: 'none'}).indexes()
   return selections;
 }
+
+var refresh_loader = document.createElement('div');
+
+let spinner_container = document.createElement('div');
+spinner_container.classList.add('d-flex');
+spinner_container.classList.add('justify-content-center');
+spinner_container.classList.add('align-items-center');
+refresh_loader.appendChild(spinner_container);
+
+let spinner = document.createElement('div');
+spinner.classList.add('button_loader');
+spinner_container.appendChild(spinner);
+
+
 
 function deleteSelected(tid) {
   //TODO: Finish method
@@ -196,18 +211,39 @@ function downloadSelected(tid) {
   
 }
 function refreshList(tid) {
-  if (tid == 'discoveredFileTable'){
+  if (tid == 'processedFileTable'){
+    
+    // add loading spinner to refresh button and disable
+    let refresh_button = document.getElementById('processRefreshButton');
+    refresh_button.disabled = true;
+    refresh_button.style.width = refresh_button.offsetWidth.toString() + 'px';
+    refresh_button.innerHTML = refresh_loader.innerHTML;
+    
+    // makes a call on the back end to recompute the processed files
+    // to reduce load on the server this should be ignored if it knows the table hasn't has changed (how to know ?)
+    let xhttp_process = new XMLHttpRequest();
+    xhttp_process.open('GET', "{{ url_for('file.refresh', ftype='processed_files') }}", true);
+    xhttp_process.send();
+    
+    
+    // put this into a function that keeps polling until True is returned and at that point the object datatable is forced to recompute
+    // call should return with response when ready
+    xhttp_process = new XMLHttpRequest();
+    xhttp_process.onload = function() {
+      this.getAllResponseHeaders();
+      // if false then send again
+    }
+    xhttp_process.open('GET', "{{ url_for('file.ready', ftype='processed_files') }}", true);
+    xhttp_process.send();
+    
+    // remove loading spinner and enable the refresh button
+    // force the datatable to resubmit it's last request for table content
+  } else if (tid == 'pendingFileTable'){
+  
+  } else if (tid == 'discoveredFileTable'){
     // call method to recompute the discovery files on the server
     // show the spinner until it completes
     // reload the table by forcing datatable to make a server request
-  }
-  if (tid == 'processedFileTable'){
-    // call method to recompute the processed files on the server
-    // show the spinner until it completes
-    // reload the table by forcing datatable to make a server request
-  }
-  if (tid == 'pendingFileTable'){
-  
   }
 }
 

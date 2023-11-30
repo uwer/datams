@@ -41,6 +41,8 @@ def select_query(data, **kwargs):
         return select_dfiles(**kwargs)
     elif data == 'mfile':
         return select_mfiles(**kwargs)
+    elif data == 'processed_files':
+        return select_processed_files()
     elif data == 'pending_files':
         return select_pending_files()
     elif data == 'discovered_files':
@@ -91,6 +93,10 @@ def _get_file_level(file_id):
 def next_deployment_id():
     stmt = text(f'''SELECT last_value FROM "Deployment_id_seq";''')
     return int(query_first_df(stmt)['last_value'])
+
+
+def select_processed_files():
+    return select_files()
 
 
 def select_pending_files():

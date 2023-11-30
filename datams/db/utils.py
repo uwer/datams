@@ -4,9 +4,6 @@ import pandas as pd
 from math import floor, log, cos, pi
 from sqlalchemy import create_engine
 
-from datams.utils import APP_CONFIG
-from datams.db.tables import Base
-
 
 class MissingRequiredDataError(Exception):
     """
@@ -30,6 +27,7 @@ def create_upload_directories(path):
             raise OSError(f"Failed to create directory `{path}/{d}` required for "
                           f"uploading.  ")
 
+
 def validate_discovery_directory(path):
     if not os.path.exists(path):
         raise NotADirectoryError(f"Discovery directory, at `{path}` does not exist.")
@@ -39,25 +37,13 @@ def validate_discovery_directory(path):
     return
 
 
-
 def generate_database_url(dialect, driver, username, password, host, port, database):
     return f"{dialect}+{driver}://{username}:{password}@{host}:{port}/{database}"
 
 
-def conect_and_return_engine():
-    url = generate_database_url(**APP_CONFIG['DATABASE'])
+def connect_and_return_engine(app_config):
+    url = generate_database_url(**app_config['DATABASE'])
     return create_engine(url)
-
-
-def initialize_db():
-    engine = conect_and_return_engine()
-    Base.metadata.drop_all(engine)
-    Base.metadata.create_all(engine)
-
-
-def sync_table_models():
-    engine = conect_and_return_engine()
-    Base.metadata.create_all(engine)
 
 
 def result_to_df(result):

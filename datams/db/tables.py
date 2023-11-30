@@ -3,7 +3,7 @@ from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import DeclarativeBase, Mapped
 from sqlalchemy.orm import mapped_column, relationship, validates
 from flask_login import UserMixin
-
+from datams.db.utils import connect_and_return_engine
 
 FILE_LEVELS = ['organization', 'deployment', 'mooring_equipment', 'unowned']
 
@@ -214,3 +214,14 @@ class User(Base, UserMixin):
     password: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[int]  # 0 is admin, 1 is editor, 2 is viewer
     reset_key: Mapped[Optional[str]]
+
+
+def initialize_db(app_config):
+    engine = connect_and_return_engine(app_config)
+    Base.metadata.drop_all(engine)
+    Base.metadata.create_all(engine)
+
+
+def sync_table_models(app_config):
+    engine = connect_and_return_engine(app_config)
+    Base.metadata.create_all(engine)

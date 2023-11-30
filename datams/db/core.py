@@ -2,10 +2,10 @@ import pandas as pd
 import click
 from flask import current_app, g
 from sqlalchemy.orm import Session
-
-from datams.db.utils import (conect_and_return_engine, initialize_db,
-                             sync_table_models, create_upload_directories,
+from datams.utils import APP_CONFIG
+from datams.db.utils import (connect_and_return_engine, create_upload_directories,
                              validate_discovery_directory, result_to_df)
+from datams.db.tables import initialize_db, sync_table_models
 
 
 def query(statement):
@@ -63,7 +63,7 @@ def get_engine(app=None):
         else:
             return app.extensions['sqlalchemy_engine']
     except RuntimeError:
-        return conect_and_return_engine()
+        return connect_and_return_engine(APP_CONFIG)
 
 
 @click.command('init-db')
@@ -72,7 +72,7 @@ def init_db_command():
     r = input('\nWARNING: This action will reset the database tables removing any and '
               'all stored values!  Do you want to continue? Y or [N]: ')
     if r.lower() == 'y':
-        initialize_db()
+        initialize_db(APP_CONFIG)
         click.echo('\nInitialized the database.')
     else:
         click.echo('\nInitialization aborted.')
@@ -86,10 +86,10 @@ def database_init_app(app):
     validate_discovery_directory(app.config['DATA_FILES']['upload_directory'])
 
     # create the engine to the database
-    app.extensions['sqlalchemy_engine'] = conect_and_return_engine()
+    app.extensions['sqlalchemy_engine'] = connect_and_return_engine(APP_CONFIG)
 
     # ensure that the sqlalchemy orm models match the database
-    sync_table_models()
+    sync_table_models(APP_CONFIG)
 
     app.cli.add_command(init_db_command)  # register the init-db command
     # TODO: app.teardown_appcontext(close_engine)?
