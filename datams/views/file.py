@@ -3,7 +3,7 @@ import datetime as dt
 from flask import (Blueprint, render_template, request, redirect, url_for, send_file,
                    jsonify, make_response, g)
 from flask_login import login_required, current_user
-from datams.celery import update_checkins, compute_and_set_task, task_complete
+from datams.celery import update_task, compute_and_set_task, task_complete
 from datams.db.views import (file_root, file_details, file_edit, file_download,
                              file_delete)  # file_add, file_pending
 from datams.db.datatables import processed_files, discovered_files
@@ -82,8 +82,8 @@ def upload():
 @bp.route('/checkin', methods=('POST',))
 @login_required
 def checkin():
-    update_checkins((request.form['uploads_id'], dt.datetime.now().timestamp()),
-                    lock='checkins')
+    update_task.delay('checkins',
+                      (request.form['uploads_id'], dt.datetime.now().timestamp()))
     return make_response(("Successful check-in", 200))
 
 
@@ -150,7 +150,6 @@ def details(fid: int):
 @login_required
 def root():
     data = file_root()
-    log.debug(current_user.username)
     data['uploads_id'] = f"{current_user.username}.{data['timestamp_str']}"
     return render_template('file/root.html', data=data)
 
@@ -162,16 +161,20 @@ def root():
 # The routes below are used to execute background tasks
 @bp.route("/refresh/<ftype>", methods=('GET',))
 @login_required
-def refresh(ftype):
-    compute_and_set_task.delay(ftype, lock=ftype)
-    return make_response(("Request for refresh submitted", 200))
+def refresh(ftype:str):
+    compute_and_set_task.delay(ftype)
+    return make_response((f"Request for refresh of {ftype.replace('_', ' ')} submitted",
+                          200))
 
 
 @bp.route("/ready/<ftype>", methods=('GET',))
 @login_required
 def ready(ftype):
+    log.debug(ftype)
     is_ready = task_complete(ftype)
+    log.debug(is_ready)
     return jsonify(dict(ready=is_ready))
+    # return str(is_ready)
 
 
 # The routes below provide server-side options for datatables

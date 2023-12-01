@@ -1,4 +1,5 @@
-from typing import Tuple
+import functools
+from typing import Tuple, Any
 from flask import Flask
 from celery import Celery, Task, shared_task
 
@@ -11,22 +12,32 @@ from datams.db.queries.select import select_query
 #  it is currently being computed and set
 
 
-def requires_lock(function, ignore_when_locked=False):
-    def wrapper(*args, lock=None, **kwargs):
-        if lock is None:
-            raise RuntimeError('Lock key required')
-        if not ignore_when_locked or not is_locked(lock):
-            acquire_lock(lock)
-            function(*args, **kwargs)
-            release_lock(lock)
-    return wrapper
+# NOTE: not the first argument of any methods decorated by this method should be `key`
+#       this determines which lock to use
+def requires_lock(_func=None, *, ignore_when_locked=False):
+    def decorator_requires_lock(func):
+        @functools.wraps(func)
+        def wrapper_requires_lock(key, *args, **kwargs):
+            # print(f"key: {key}")
+            # print(f"args: {args}")
+            # print(f"kwargs: {kwargs}")
+            if not ignore_when_locked or not is_locked(key):
+                acquire_lock(key)
+                retval = func(key, *args, **kwargs)
+                release_lock(key)
+            return retval
+        return wrapper_requires_lock
+    if _func is None:
+        return decorator_requires_lock
+    else:
+        return decorator_requires_lock(_func)
 
 
 # define background tasks
-@shared_task
+@shared_task(name='compute_and_set')  # explicitly set task name because of wrapper
 @requires_lock(ignore_when_locked=True)
 def compute_and_set_task(key) -> None:
-    # FIXME: Currently this method assumes all data coming from select_query is a pandas
+    # NOTE: Currently this method assumes all data coming from select_query is a pandas
     #        Dataframe.
     try:
         # if key is not implemented, release the lock and ignore the request
@@ -36,19 +47,22 @@ def compute_and_set_task(key) -> None:
         pass
 
 
-@shared_task
+@shared_task(name='update')
 @requires_lock
-def update_checkins(value: Tuple[str, float]) -> None:
-    checkins = get_value('checkins')
-    updated_checkins = update_and_append_to_checkins(checkins, value)
-    set_value(checkins, str(updated_checkins))
+def update_task(key, value: Any) -> None:
+    # NOTE: if method isn't defined then value is simply set, but it is assumed that
+    #       its type is compatible
+    methods = dict(
+        checkins=lambda x, y: str(update_and_append_to_checkins(get_value(x), y)),
+    )
+    method = methods.get(key, lambda x, y: y)
+    set_value(key, method(key, value))
 
 
-@shared_task
+@shared_task(name='remove_stale_files')
 @requires_lock
-def remove_stale_files_task() -> None:
-    checkins = get_value('checkins')
-    remove_stale_files(checkins)
+def remove_stale_files_task(key) -> None:
+    remove_stale_files(get_value('checkins'))
 
 
 def task_complete(key) -> bool:
@@ -70,18 +84,18 @@ def celery_init_app(app: Flask) -> Celery:
     app.extensions['celery'] = celery_app
 
     # 3) start background task of computing and setting processed files
-    compute_and_set_task.delay('processed_files', lock='processed_files')
+    compute_and_set_task.delay('processed_files')
 
     # 4) start background task of discovering files
-    compute_and_set_task.delay('discovered_files', lock='discovered_files')
+    compute_and_set_task.delay('discovered_files')
 
     # 5) start period task of removing stale files
     celery_app.conf.beat_schedule = {
-        'remove_stale_pending_files': {
-            'task': 'datams.celery.remove_stale_files_task',
+        'remove_stale_files': {
+            'task': 'remove_stale_files',
             'schedule': app.config['DATA_FILES']['remove_stales_every'],
-            # 'args': (PENDING_DIRECTORY,)
-            'kwargs': dict(lock='remove_stale_files')
+            'args': ('remove_stale_files',),
+            # 'kwargs': dict(key='remove_stale_files')
         },
     }
 

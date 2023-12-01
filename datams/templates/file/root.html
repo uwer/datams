@@ -126,6 +126,7 @@ function monitorSelections() {
 }
 
 checkIn();
+//console.log({{ polling_freq }});
 
 // should this function be async?
 function checkIn() {
@@ -133,7 +134,7 @@ function checkIn() {
     xhttp.open('POST', "{{ url_for('file.checkin') }}", true);
     xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
     xhttp.send("uploads_id={{ data['uploads_id'] }}");
-    setTimeout(keepAlive, {{ polling_freq }});
+    setTimeout(checkIn, {{ polling_freq }});
 }
 
 Dropzone.autoDiscover = false;
@@ -211,67 +212,75 @@ function downloadSelected(tid) {
   
 }
 function refreshList(tid) {
-
-
   if (tid == 'processedFileTable') {
-    let bid = 'processedRefreshButton';
-    let request_url = "{{ url_for('file.refresh', ftype='processed_files') }}";
-    let ready_url = "{{ url_for('file.ready', ftype='processed_files') }}";
+    var bid = 'processedRefreshButton';
+    var refresh_url = "{{ url_for('file.refresh', ftype='processed_files') }}";
   } 
   
   else if (tid == 'pendingFileTable') {
-    let bid = 'pendingRefreshButton';
-    let request_url = "{{ url_for('file.refresh', ftype='pending_files') }}";
-    let ready_url = "{{ url_for('file.ready', ftype='pending_files') }}";
+    var bid = 'pendingRefreshButton';
+    var refresh_url = "{{ url_for('file.refresh', ftype='pending_files') }}";
   } 
   
   else if ('discoveredFileTable') {
-    let bid = 'discoveredRefreshButton';
-    let request_url = "{{ url_for('file.refresh', ftype='discovered_files') }}";
-    let ready_url = "{{ url_for('file.ready', ftype='discovered_files') }}";
+    var bid = 'discoveredRefreshButton';
+    var refresh_url = "{{ url_for('file.refresh', ftype='discovered_files') }}";
   }
 
   // add loading spinner to refresh button and disable
   let refresh_button = document.getElementById(bid);
   refresh_button.disabled = true;
-  refresh_button.style.width = refresh_button.offsetWidth.toString() + 'px';
+  refresh_button.style.minWidth = refresh_button.offsetWidth.toString() + 'px';
   refresh_button.innerHTML = refresh_loader.innerHTML;
   
   // makes a call on the back end to recompute the processed files
   // to reduce load on the server this should be ignored if it knows the table hasn't has changed (how to know ?)
   let xhttp_refresh = new XMLHttpRequest();
-  xhttp_refresh.open('GET', request_url, true);
+  xhttp_refresh.open('GET', refresh_url, true);
   xhttp_refresh.send();
   
   
-  // put this into a function that keeps polling until True is returned and at that point the object datatable is forced to recompute
-  // call should return with response when ready
-  
-  let xhttp_ready = new XMLHttpRequest();
-  xhttp_ready.onload = refresh_if_ready(xhttp_ready, refresh_button, tid);
-  xhttp_ready.open('GET', request_url, true);
-  xhttp_ready.send();
-    
-  
+  // refresh the table and enable the button when the data has been refreshed
+  setTimeout(function (){refresh_when_ready(tid);}, 1000);
 }
 
-function refresh_if_ready(req, refresh_button, tid){
-    let res = JSON.parse(req.responseText);
-    console.log(res.ready)
-    if (res.ready == True) {  // TODO: Ensure that this is correct comparison
+function refresh_when_ready(tid){
+  console.log('refresh_when_ready');
+  if (tid == 'processedFileTable') {
+    var bid = 'processedRefreshButton';
+    var ready_url = "{{ url_for('file.ready', ftype='processed_files') }}";
+  } 
+  
+  else if (tid == 'pendingFileTable') {
+    var bid = 'pendingRefreshButton';
+    var ready_url = "{{ url_for('file.ready', ftype='pending_files') }}";
+  } 
+  else if ('discoveredFileTable') {
+    var bid = 'discoveredRefreshButton';
+    var ready_url = "{{ url_for('file.ready', ftype='discovered_files') }}";
+  }
+  
+  let refresh_button = document.getElementById(bid);
+  let xhttp_ready = new XMLHttpRequest();
+  xhttp_ready.onload = function () {
+    let res = JSON.parse(this.responseText);
+    // keep checking if the result is ready every 0.5 seconds it is
+    if (res.ready == true) {
       // remove loading spinner and enable the refresh button
       refresh_button.innerHTML = "<b>Refresh List</b>";
-      refresh_button.disabled = False;
+      refresh_button.disabled = false;
       // force the datatable to resubmit it's last request for table content
-      tables[tid].ajax.reload();
-    } else {
-        setTimeout(function(){refresh_if_ready(req, refresh_button, tid);}, 500);  // poll again in 0.5 seconds
+      console.log(tid)
+      console.log(tables.get(tid));
+      tables.get(tid).ajax.reload();
+      //tables[tid].ajax.reload();
     }
-    // if false then send again
-    
-    // remove loading spinner and enable the refresh button
-    // force the datatable to resubmit it's last request for table content
-
+    else {
+        setTimeout(function (){refresh_when_ready(tid);}, 500);  // check again in 0.5 seconds
+    }
+  };
+  xhttp_ready.open('GET', ready_url, false);
+  xhttp_ready.send();
 }
 
 /*
