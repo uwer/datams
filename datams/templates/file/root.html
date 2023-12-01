@@ -25,13 +25,13 @@ TODO: Add a paragraph or two of instructions on how this all works
   <div class="tab-pane fade show active" id="nav-processed" role="tabpanel" aria-labelledby="nav-processed-tab">
     <div class="d-block w-100 pt-2 pb-2" style="height: 50px;">
       <div class="d-block float-start">
-       <button id="processRefreshButton" class="btn btn-primary" type="button" onclick="refreshList('processedFileTable')"><b>Refresh List</b></button>
-       <button id="processDownloadButton" class="btn btn-secondary" type="button" onclick="downloadSelected('processedFileTable')" disabled><b>Download Selected</b></button>
-       <button id="processDetailsButton" class="btn btn-secondary" type="button" onclick="viewDetails('processedFileTable')" disabled><b>View Details</b></button>
+       <button id="processedRefreshButton" class="btn btn-primary" type="button" onclick="refreshList('processedFileTable')"><b>Refresh List</b></button>
+       <button id="processedDownloadButton" class="btn btn-secondary" type="button" onclick="downloadSelected('processedFileTable')" disabled><b>Download Selected</b></button>
+       <button id="processedDetailsButton" class="btn btn-secondary" type="button" onclick="viewDetails('processedFileTable')" disabled><b>View Details</b></button>
       </div>
       <div class="d-block float-end">
-       <button id="processEditButton" class="btn btn-warning" type="button" onclick="processSelected('processedFileTable')" disabled><b>Edit Selected</b></button>
-       <button id="processDeleteButton" class="btn btn-danger" type="button" onclick="deleteSelected('processedFileTable')" disabled><b>Delete Selected</b></button>
+       <button id="processedEditButton" class="btn btn-warning" type="button" onclick="processSelected('processedFileTable')" disabled><b>Edit Selected</b></button>
+       <button id="processedDeleteButton" class="btn btn-danger" type="button" onclick="deleteSelected('processedFileTable')" disabled><b>Delete Selected</b></button>
       </div>
     </div>
     <div class="d-block w-100">
@@ -89,10 +89,10 @@ function selectionChanged(e, dt, type, indexes) {
   let tid = e.currentTarget.id;
   let num_selections = getSelections(tid).length;
   if (tid == 'processedFileTable') {
-    document.getElementById('processEditButton').disabled = (num_selections == 0);
-    document.getElementById('processDeleteButton').disabled = (num_selections == 0);
-    document.getElementById('processDownloadButton').disabled = (num_selections == 0);
-    document.getElementById('processDetailsButton').disabled = !(num_selections == 1);    
+    document.getElementById('processedEditButton').disabled = (num_selections == 0);
+    document.getElementById('processedDeleteButton').disabled = (num_selections == 0);
+    document.getElementById('processedDownloadButton').disabled = (num_selections == 0);
+    document.getElementById('processedDetailsButton').disabled = !(num_selections == 1);    
   } else if (tid == 'pendingFileTable') {
     document.getElementById('pendingProcessButton').disabled = (num_selections == 0);
     document.getElementById('pendingDeleteButton').disabled = (num_selections == 0);
@@ -211,40 +211,67 @@ function downloadSelected(tid) {
   
 }
 function refreshList(tid) {
-  if (tid == 'processedFileTable'){
+
+
+  if (tid == 'processedFileTable') {
+    let bid = 'processedRefreshButton';
+    let request_url = "{{ url_for('file.refresh', ftype='processed_files') }}";
+    let ready_url = "{{ url_for('file.ready', ftype='processed_files') }}";
+  } 
+  
+  else if (tid == 'pendingFileTable') {
+    let bid = 'pendingRefreshButton';
+    let request_url = "{{ url_for('file.refresh', ftype='pending_files') }}";
+    let ready_url = "{{ url_for('file.ready', ftype='pending_files') }}";
+  } 
+  
+  else if ('discoveredFileTable') {
+    let bid = 'discoveredRefreshButton';
+    let request_url = "{{ url_for('file.refresh', ftype='discovered_files') }}";
+    let ready_url = "{{ url_for('file.ready', ftype='discovered_files') }}";
+  }
+
+  // add loading spinner to refresh button and disable
+  let refresh_button = document.getElementById(bid);
+  refresh_button.disabled = true;
+  refresh_button.style.width = refresh_button.offsetWidth.toString() + 'px';
+  refresh_button.innerHTML = refresh_loader.innerHTML;
+  
+  // makes a call on the back end to recompute the processed files
+  // to reduce load on the server this should be ignored if it knows the table hasn't has changed (how to know ?)
+  let xhttp_refresh = new XMLHttpRequest();
+  xhttp_refresh.open('GET', request_url, true);
+  xhttp_refresh.send();
+  
+  
+  // put this into a function that keeps polling until True is returned and at that point the object datatable is forced to recompute
+  // call should return with response when ready
+  
+  let xhttp_ready = new XMLHttpRequest();
+  xhttp_ready.onload = refresh_if_ready(xhttp_ready, refresh_button, tid);
+  xhttp_ready.open('GET', request_url, true);
+  xhttp_ready.send();
     
-    // add loading spinner to refresh button and disable
-    let refresh_button = document.getElementById('processRefreshButton');
-    refresh_button.disabled = true;
-    refresh_button.style.width = refresh_button.offsetWidth.toString() + 'px';
-    refresh_button.innerHTML = refresh_loader.innerHTML;
-    
-    // makes a call on the back end to recompute the processed files
-    // to reduce load on the server this should be ignored if it knows the table hasn't has changed (how to know ?)
-    let xhttp_process = new XMLHttpRequest();
-    xhttp_process.open('GET', "{{ url_for('file.refresh', ftype='processed_files') }}", true);
-    xhttp_process.send();
-    
-    
-    // put this into a function that keeps polling until True is returned and at that point the object datatable is forced to recompute
-    // call should return with response when ready
-    xhttp_process = new XMLHttpRequest();
-    xhttp_process.onload = function() {
-      this.getAllResponseHeaders();
-      // if false then send again
+  
+}
+
+function refresh_if_ready(req, refresh_button, tid){
+    let res = JSON.parse(req.responseText);
+    console.log(res.ready)
+    if (res.ready == True) {  // TODO: Ensure that this is correct comparison
+      // remove loading spinner and enable the refresh button
+      refresh_button.innerHTML = "<b>Refresh List</b>";
+      refresh_button.disabled = False;
+      // force the datatable to resubmit it's last request for table content
+      tables[tid].ajax.reload();
+    } else {
+        setTimeout(function(){refresh_if_ready(req, refresh_button, tid);}, 500);  // poll again in 0.5 seconds
     }
-    xhttp_process.open('GET', "{{ url_for('file.ready', ftype='processed_files') }}", true);
-    xhttp_process.send();
+    // if false then send again
     
     // remove loading spinner and enable the refresh button
     // force the datatable to resubmit it's last request for table content
-  } else if (tid == 'pendingFileTable'){
-  
-  } else if (tid == 'discoveredFileTable'){
-    // call method to recompute the discovery files on the server
-    // show the spinner until it completes
-    // reload the table by forcing datatable to make a server request
-  }
+
 }
 
 /*
