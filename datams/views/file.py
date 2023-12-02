@@ -1,17 +1,18 @@
 import os
 import datetime as dt
 from flask import (Blueprint, render_template, request, redirect, url_for, send_file,
-                   jsonify, make_response, g)
+                   jsonify, make_response)
 from flask_login import login_required, current_user
 from datams.celery import update_task, compute_and_set_task, task_complete
 from datams.db.views import (file_root, file_details, file_edit, file_download,
                              file_delete)  # file_add, file_pending
-from datams.db.datatables import processed_files, discovered_files
-from datams.utils import PENDING_DIRECTORY, REMOVE_STALES_EVERY
+from datams.db.requests import parse_request
+from datams.db.datatables import fetch
+from datams.utils import PENDING_DIRECTORY, PROCESSED_DIRECTORY
 from werkzeug.utils import secure_filename
+from datams.db.queries.select import select_discovered_files
+from datams.db.queries.insert import insert_files
 
-# from datams.redis import update_alive
-# from datams.redis import get_pending_files, get_discovered_files
 import logging
 
 logging.basicConfig()
@@ -118,6 +119,76 @@ def cancel():
 @bp.route('/process', methods=('POST',))
 @login_required
 def process():
+    values = parse_request(request, table='File', rtype='process')
+
+    ftype = values.pop('ftype')
+    filepaths = reversed(values.pop('filepaths'))
+    filenames = values.pop('filenames')
+
+    assert len(filepaths) == len(filenames)
+    end_idx = len(filepaths) - 1
+
+    if ftype == 'processed_files':
+        # update the entry in the database with new details
+        # template can then call the refresh method (for the table)
+        pass
+
+    if ftype == 'pending_files':
+        # figure out what the largest number directory is in the processed directory
+        all_dirs = [i for i in os.listdir(PROCESSED_DIRECTORY)
+                    if os.path.isdir(f"{PROCESSED_DIRECTORY}/{i}")]
+        final_dirs = []
+        for d in all_dirs:
+            try:
+                final_dirs.append(int(d))
+            except TypeError:
+                pass
+
+        curr_dir_index = max(final_dirs) if final_dirs else 0
+        curr_dir = f"{PROCESSED_DIRECTORY}/{curr_dir_index}"
+        if not final_dirs:
+            os.makedirs(curr_dir)
+        curr_dir_count = len(os.listdir(curr_dir))
+
+        new_filepaths = []
+        for idx, path in enumerate(filepaths):
+            if os.path.exists(path):
+                file = secure_filename(os.path.basename(path))
+                curr_dir_count += 1
+                if curr_dir_count > 65000:
+                    curr_dir_index += 1
+                    curr_dir = f"{PROCESSED_DIRECTORY}/{curr_dir_index}"
+                    os.makedirs(curr_dir)
+                    curr_dir_count = 0
+                try:
+                    new_path = f"{curr_dir}/{file}"
+                    os.rename(path, new_path)
+                    new_filepaths.append(new_path)
+                except Exception as error:  # should make this more specific
+                    curr_dir_count -= 1
+                    filenames.pop(end_idx - idx)
+                    log.error(error)
+
+        values['paths'] = reversed(new_filepaths)
+        values['names'] = filenames
+
+
+        # from the current number of files in the submitted directory
+        # if it is greater than
+        # for each file
+        # try moving the file into the pro
+        # move the file to the processed file directory
+        pass
+
+    if ftype == 'discovered_files':
+        pass
+        # log.debug(values['tid'])
+        # log.debug(values['paths'])
+        # values['description']
+        # values['comments']
+        # values['level']
+        # values['uploaded']
+
     # TODO: Implement this will take the information it needs from the form
     return redirect(request.referrer)
 
@@ -154,14 +225,11 @@ def root():
     return render_template('file/root.html', data=data)
 
 
-# TODO: Come up with strategy to determine if the files need to be recomputed.
-#       for now if it is already recomputing then request is ignored
-# TODO: Combine the various requests to recompute into a single route that takes the
-#       resource as an argument
 # The routes below are used to execute background tasks
 @bp.route("/refresh/<ftype>", methods=('GET',))
 @login_required
-def refresh(ftype:str):
+def refresh(ftype: str):
+    # select_discovered_files()
     compute_and_set_task.delay(ftype)
     return make_response((f"Request for refresh of {ftype.replace('_', ' ')} submitted",
                           200))
@@ -170,24 +238,15 @@ def refresh(ftype:str):
 @bp.route("/ready/<ftype>", methods=('GET',))
 @login_required
 def ready(ftype):
-    log.debug(ftype)
     is_ready = task_complete(ftype)
-    log.debug(is_ready)
     return jsonify(dict(ready=is_ready))
-    # return str(is_ready)
 
 
-# The routes below provide server-side options for datatables
-@bp.route("/processed_datatable", methods=('GET',))
+@bp.route("/ajax", methods=('GET',))
 @login_required
-def processed_datatable():
-    return jsonify(processed_files(request))
-
-
-@bp.route("/discovered_datatable", methods=('GET',))
-@login_required
-def discovered_datatable():
-    return jsonify(discovered_files(request))
+def ajax():
+    # This routes below provide server-side computations for datatables (used by files)
+    return jsonify(fetch(request))
 
 
 
@@ -233,3 +292,39 @@ def edit(fid: int):
 # @login_required
 # def test_datatable():
 #     return jsonify(test_files(request))
+
+# @bp.route("/ajax_processed", methods=('GET',))
+# @login_required
+# def ajax_processed():
+#     return jsonify(fetch('processed_files', request))
+#
+#
+# @bp.route("/ajax_pending", methods=('GET',))
+# @login_required
+# def ajax_pending():
+#     return jsonify(fetch('pending_files', request))
+#
+#
+# @bp.route("/ajax_discovered", methods=('GET',))
+# @login_required
+# def ajax_discovered():
+#     return jsonify(fetch('discovered_files', request))
+#
+#
+# @bp.route("/ajax_deleted", methods=('GET',))
+# @login_required
+# def ajax_deleted():
+#     return jsonify(fetch('deleted_files', request))
+
+
+# # The routes below provide server-side options for datatables
+# @bp.route("/processed_datatable", methods=('GET',))
+# @login_required
+# def processed_datatable():
+#     return jsonify(processed_files(request))
+#
+#
+# @bp.route("/discovered_datatable", methods=('GET',))
+# @login_required
+# def discovered_datatable():
+#     return jsonify(discovered_files(request))

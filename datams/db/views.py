@@ -2,7 +2,7 @@ import datetime as dt
 import flask
 import pandas as pd
 from functools import partial
-from datams.utils import move_pending_files
+# from datams.utils import move_pending_files
 # from datams.celery import load_processed_files
 from datams.db.requests import parse_request
 from datams.db.utils import (mooring_add_equipment_html, mooring_files_add_section,
@@ -172,20 +172,28 @@ def deployment_delete(did):
 #                                           'uploaded', 'url'])
 #     return data
 
-
+# TODO: rename files to processed_files
 def file_root():
     kwargs = dict(view='file.root')
-    data_to_fetch = ['pending_files', 'deleted_files', 'all_organizations',
-                     'all_deployments', 'all_moorings', 'all_equipment', 'all_levels',
-                     'all_descriptions']
+    data_to_fetch = ['all_organizations', 'all_deployments', 'all_moorings',
+                     'all_equipment', 'all_levels', 'all_descriptions']
     data = fetch_data(data_to_fetch, **kwargs)
     data['timestamp_str'] = f"{dt.datetime.now().timestamp():10.6f}".replace('.', '')
 
-    # don't actually pull files or discovered_files (it's too slow), instead create an
-    # empty dataframe placeholder
-    data['files'] = pd.DataFrame(columns=['level', 'owner', 'description', 'filename',
-                                          'uploaded', 'url'])
-    data['discovered_files'] = pd.DataFrame(columns=['file', 'last_modified'])
+    # don't actually pull any file list (it's too slow), instead create empty pandas
+    # DataFrame placeholders
+    data['processed_files'] = pd.DataFrame(columns=[
+        'filename', 'level', 'owner', 'description', 'uploaded', 'url', 'filepath'
+    ])
+    data['pending_files'] = pd.DataFrame(columns=[
+        'filename', 'uploaded', 'uploaded_by', 'filepath'
+    ])
+    data['discovered_files'] = pd.DataFrame(columns=[
+        'filename', 'last_modified', 'filepath'
+    ])
+    data['deleted_files'] = pd.DataFrame(columns=[
+        'filename', 'deleted', 'deleted_by', 'originally_uploaded_by', 'filepath'
+    ])
     return data
 
 

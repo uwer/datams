@@ -121,6 +121,7 @@ class File(Base):
     )
 
     path: Mapped[str]
+    name: Mapped[Optional[str]]
     description: Mapped[str]
     uploaded: Mapped[int]
     comments: Mapped[Optional[str]]

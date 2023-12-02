@@ -2,7 +2,7 @@
   <div class="col-md-6">
     <label for="level" class="form-label">Level</label>
     <select name="level" id="level" class="form-select" required onchange="levelChanged()">
-    <option id='level_default_option' value="unowned" selected disabled hidden>Choose...</option>
+    <option id='level_default_option' value="" selected disabled hidden>Choose...</option>
     {% for i in data['all_levels']%}
       <option value="{{ i }}">{{ i.replace('_', ' ').title() }}</option>
     {% endfor %}
@@ -48,8 +48,9 @@
     <label for="comments" class="form-label">Comments</label>
     <input type="textarea" class="form-control" name="comments" id="comments">
   </div>
-  <input type="hidden" id="file_set" name="file_set" value="">
-  <input type="hidden" id="ids_selected" name="ids_selected" value="">
+  <input id="ftype" name="ftype" type="hidden"  value="">
+  <input id="filepaths" name="filepaths" type="hidden" value="">
+  <input id="filenames" name="filenames" type="hidden" value="">
   <div class="col-md-2">
     <button id="submitButton" type="submit" class="btn btn-primary">Submit</button>
   </div>

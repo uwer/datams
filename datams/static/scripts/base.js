@@ -280,7 +280,7 @@ function updateOrganizationOptions() {
 
 function levelChanged() {
   let e = document.getElementById('level');
-  if(e.value == 'unowned') {
+  if(e.value == 'unowned' || e.value == '') {
     document.getElementById('organization_id').parentElement.classList.add('d-none');
     document.getElementById('deployment_id').parentElement.classList.add('d-none');
     document.getElementById('mooring_id').parentElement.classList.add('d-none');

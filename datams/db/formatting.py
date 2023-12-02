@@ -124,8 +124,11 @@ def file_format(df, compute, level=None):
         df['url'] = df['id'].apply(lambda x: f"/file/details/{x}")
         # df['url'] = df['id'].apply(lambda x: url_for('dfile.details', fid=x))
 
-    if meets_requirements(compute, 'filename', ['path'], df.columns):
-        df['filename'] = df['path'].apply(lambda x: os.path.basename(x))
+    if meets_requirements(compute, 'filename', ['path', 'name'], df.columns):
+        df['filename'] = df.apply(
+            lambda x: os.path.basename(x['path']) if pd.isna(x['name']) else x['name'],
+            axis=1
+        )
 
     if 'level' in compute:
         if level is not None:

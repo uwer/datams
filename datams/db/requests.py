@@ -158,14 +158,43 @@ def extract_equipment_fields(request, rtype):
     return get_fields(request, strict, form_fields)
 
 
-def extract_file_fields(request, rtype):
+# def extract_file_fields_orig(request, rtype):
+#     form_fields = {
+#         'files': ('paths', uploaded_filepath),
+#         'description': ('description', str),
+#         'comments': ('comments', str),
+#         'level': ('level', str),
+#     }
+#     strict = False if rtype == 'edit' else True
+#     values = get_fields(request, strict, form_fields)
+#     values['uploaded'] = current_timestamp()
+#     values['organization_id'] = None
+#     values['deployment_id'] = None
+#     values['mooring_equipment_id'] = None
+#     level = values.pop('level')
+#     if level == 'organization':
+#         values['organization_id'] = get_form_field(request, 'organization_id', int)
+#     elif level == 'deployment':
+#         values['deployment_id'] = get_form_field(request, 'deployment_id', int)
+#     elif level == 'mooring_equipment':
+#         mid = get_form_field(request, f"mooring_id", int)
+#         eid = get_form_field(request, f"equipment_id", int)
+#         values['mooring_equipment_id'] = select_mooring_equipment_id(mid, eid)
+#     else:  # unowned
+#         pass
+#     return values
+
+
+def extract_file_fields(request, rtype: str = 'default'):
     form_fields = {
-        'files': ('paths', uploaded_filepath),
+        'ftype': ('ftype', str),
+        'filepaths': ('filepaths', eval),
         'description': ('description', str),
         'comments': ('comments', str),
         'level': ('level', str),
     }
-    strict = False if rtype == 'edit' else True
+    # strict = False if rtype == 'edit' else True
+    strict = True
     values = get_fields(request, strict, form_fields)
     values['uploaded'] = current_timestamp()
     values['organization_id'] = None

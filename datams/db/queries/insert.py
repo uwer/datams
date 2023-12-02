@@ -35,6 +35,11 @@ def insert_deployment(values: Dict[str, Any]):
                for organization_id in organization_ids])
 
 
+# def insert_files_orig(values: Dict[str, Any]):
+#     paths = values.pop('paths')
+#     query_all([insert(File).values(path=p, **values) for p in paths])
+
+
 def insert_files(values: Dict[str, Any]):
     paths = values.pop('paths')
     query_all([insert(File).values(path=p, **values) for p in paths])

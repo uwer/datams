@@ -83,11 +83,11 @@ def celery_init_app(app: Flask) -> Celery:
     celery_app.set_default()
     app.extensions['celery'] = celery_app
 
-    # 3) start background task of computing and setting processed files
+    # 3) start background task of computing and setting various file types
     compute_and_set_task.delay('processed_files')
-
-    # 4) start background task of discovering files
+    compute_and_set_task.delay('pending_files')
     compute_and_set_task.delay('discovered_files')
+    compute_and_set_task.delay('deleted_files')
 
     # 5) start period task of removing stale files
     celery_app.conf.beat_schedule = {
@@ -98,8 +98,6 @@ def celery_init_app(app: Flask) -> Celery:
             # 'kwargs': dict(key='remove_stale_files')
         },
     }
-
-    # TODO: May want to follow similar pattern for loading pending and deleted files?
     return celery_app
 
 # EXAMPLE OF HOW TO CHAIN TOGETHER MULTIPLE TASKS
