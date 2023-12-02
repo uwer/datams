@@ -569,7 +569,7 @@ def select_mfiles(view=None, **kwargs):
         # 'view': (columns, where)
         'None':
             (['id', 'level', 'owner', 'description', 'filename', 'uploaded', 'comments',
-              'path', 'url', 'organization_id', 'deployment_id', 'mooring_id', 'name'
+              'path', 'url', 'organization_id', 'deployment_id', 'mooring_id', 'name',
               'equipment_id', 'mooring_equipment_id'], fid),
         'deployment.details':
             (['description', 'filename', 'uploaded', 'url', 'mooring_id', 'name'],
@@ -622,7 +622,7 @@ def select_files(view=None, **kwargs):
         df = file_format(df, compute=['filename'])
         return df[['path', 'filename']]
     elif view in ('file.details', 'file.edit'):
-        columns = ['id', 'description', 'filename', 'name', 'path', 'uploaded', 'level',
+        columns = ['id', 'description', 'filename', 'path', 'uploaded', 'level',
                    'owner', 'comments']
         if view == 'file.edit':
             columns += ['organization_id', 'deployment_id', 'mooring_id',

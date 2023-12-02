@@ -242,17 +242,19 @@ function processSelected(tid) {
   
   //var filepaths = "['";
   let filepaths = "['";
+  let filenames = "['";
   let table = tables.get(tid);
   table.rows({ selected: true, filter: 'none'}).every( function (rowIdx, tableLoop, rowLoop) {
-    if (tid == 'processedFileTable'){
-      //console.log(files);
-      //console.log(table.row(rowIdx).data()[3]);
-      filepaths = filepaths.concat(table.row(rowIdx).data()[100] + "', '");
-    }
+    //console.log(files);
+    //console.log(table.row(rowIdx).data()[3]);
+    filepaths = filepaths.concat(table.row(rowIdx).data()[100] + "', '");
+    filenames = filenames.concat(table.row(rowIdx).data()[101] + "', '");
   });
   filepaths = filepaths.slice(0, -3).concat(']');
+  filenames = filenames.slice(0, -3).concat(']');
   //console.log(filepaths);
   document.getElementById('filepaths').value = filepaths;
+  document.getElementById('filenames').value = filenames;
   //console.log(tables.get(tid).rows(getSelections(tid)).data())
   
 }

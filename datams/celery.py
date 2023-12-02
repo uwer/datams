@@ -21,6 +21,7 @@ def requires_lock(_func=None, *, ignore_when_locked=False):
             # print(f"key: {key}")
             # print(f"args: {args}")
             # print(f"kwargs: {kwargs}")
+            retval = None
             if not ignore_when_locked or not is_locked(key):
                 acquire_lock(key)
                 retval = func(key, *args, **kwargs)

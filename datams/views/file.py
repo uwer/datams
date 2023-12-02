@@ -122,7 +122,7 @@ def process():
     values = parse_request(request, table='File', rtype='process')
 
     ftype = values.pop('ftype')
-    filepaths = reversed(values.pop('filepaths'))
+    filepaths = [f for f in reversed(values.pop('filepaths'))]
     filenames = values.pop('filenames')
 
     assert len(filepaths) == len(filenames)
@@ -169,8 +169,9 @@ def process():
                     filenames.pop(end_idx - idx)
                     log.error(error)
 
-        values['paths'] = reversed(new_filepaths)
+        values['paths'] = [f for f in reversed(new_filepaths)]
         values['names'] = filenames
+        insert_files(values)
 
 
         # from the current number of files in the submitted directory
@@ -178,7 +179,7 @@ def process():
         # for each file
         # try moving the file into the pro
         # move the file to the processed file directory
-        pass
+
 
     if ftype == 'discovered_files':
         pass
