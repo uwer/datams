@@ -53,9 +53,13 @@ def acquire_lock(key: str):
 
 
 def release_lock(key: str):
+    delete_key(f"{key}_lock")
+
+
+def delete_key(key: str):
     redis = get_redis()
-    if redis.exists(f"{key}_lock") == 1:
-        redis.delete(f"{key}_lock")
+    if redis.exists(key) == 1:
+        redis.delete(key)
     return
 
 
@@ -66,26 +70,47 @@ def set_value(key, value) -> None:
     redis.set(key, value)
 
 
-def get_value(key) -> Any:
+def get_value(key: str) -> Any:
     redis = get_redis()
     key_conversion_default = dict(
         processed_files=(lambda x: pd.read_json(StringIO(x)),
                          pd.DataFrame(columns=['id', 'level', 'owner', 'description',
                                                'filename', 'uploaded', 'url'])),
-        discovered_files=(lambda x: pd.read_json(StringIO(x)),
-                          pd.DataFrame(columns=['filename', 'last_modified'])),
-        checkins=(eval, []),
         pending_files=(lambda x: pd.read_json(StringIO(x)),
                        pd.DataFrame(columns=['filename', 'uploaded', 'uploaded_by'])),
+        discovered_files=(lambda x: pd.read_json(StringIO(x)),
+                          pd.DataFrame(columns=['filename', 'last_modified'])),
         deleted_files=(lambda x: pd.read_json(StringIO(x)),
                        pd.DataFrame(columns=['filename', 'deleted', 'deleted_by',
-                                             'originally_uploaded_by']))
+                                             'originally_uploaded_by'])),
+        checkins=(eval, []),
     )
-    if key not in key_conversion_default.keys():
-        raise RuntimeError(f"Attempting to get unknown key: `{key}`")
-    conversion, default = key_conversion_default[key]
+    is_vkey = False
+    if key.startswith('vkey_'):
+        is_vkey = True
+        root_key = '_'.join(key.split('_')[2:])
+    else:
+        root_key = key
+    if root_key not in key_conversion_default.keys():
+        raise RuntimeError(f"Attempting to get unknown key: `{root_key}`")
+    conversion, default = key_conversion_default[root_key]
     value = redis.get(key)
+    if is_vkey and value is None:
+        root_value = redis.get(root_key)
+        root_value = default.to_json() if root_value is None else root_value
+        set_value(key, root_value)
+        value = root_value
     return default if value is None else conversion(value)
+
+
+# TODO: Consider expanding this concept to any variables we want to freeze for a view so
+#       that removing these would simply entail looking for a specific key prefix and
+#       seeing if the uploads_id is valid rather than explicitly listing each type.
+def remove_stale_vkeys(valid_uids):
+    redis = get_redis()
+    delete = [k for k in redis.scan_iter("vkey_*") if k.split('_')[1] not in valid_uids]
+    for k in delete:
+        redis.delete(k)
 
 
 def redis_init_app(app: Flask) -> Redis:

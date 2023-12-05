@@ -35,21 +35,23 @@ def fetch(request: flask.Request):
     column_maps = dict(
         processed_files={
             0: 'level', 1: 'filename', 2: 'owner', 3: 'description', 4: 'uploaded',
-            5: 'url', 100: 'filepath', 101: 'name'
+            5: 'url', 100: 'id'  # 101: 'name',  100: 'filepath'
         },
         pending_files={
-            0: 'filename', 1: 'uploaded', 2: 'uploaded_by', 100: 'filepath', 101: 'name'
+            0: 'filename', 1: 'uploaded', 2: 'uploaded_by', 100: 'id'
+            # 101: 'name', 100: 'filepath'
         },
         discovered_files={
-            0: 'filename', 1: 'last_modified', 100: 'filepath', 101: 'name'
+            0: 'filename', 1: 'last_modified', 100: 'id'  # 101: 'name', 100: 'filepath'
         },
         deleted_files={
             0: 'filename', 1: 'deleted', 2: 'deleted_by', 3: 'originally_uploaded_by',
-            100: 'filepath', 101: 'name'
+            100: 'id'  # 101: 'name', 100: 'filepath'
         },
     )
     request_values = request.values
 
+    uploads_id = request_values['uploads_id']
     ftype = request_values['ftype']
     draw = request_values['draw']
     start = int(request_values['start'])
@@ -74,8 +76,11 @@ def fetch(request: flask.Request):
                 cargs = column_attributes.get(cidx, dict())
                 cargs[key] = False if v == 'false' else True
                 column_attributes[cidx] = cargs
-    df = get_value(ftype)
-    df['name'] = df.loc[:, 'filename']
+    df = get_value(f"vkey_{uploads_id}_{ftype}")[[v for v in cmap.values()]]
+    # log.debug(df.columns)
+    # log.debug(" + ' ' + ".join(
+    #             [f"df['{i}']" for i in cmap.values()
+    #              if i != 'url' and i != 'filepath' and i != 'name']))
     search_value = request_values['search[value]']
     if search_value != '':
         for i in ['.', '+', '?', '^', '$', '|', '&']:
@@ -83,7 +88,7 @@ def fetch(request: flask.Request):
         re = '^' + ''.join([f"(?=.*{w})" for w in search_value.split(' ') if w != ''])
         searchable = df.assign(
             a=eval(" + ' ' + ".join(
-                [f"df['{i}']" for i in cmap.values()
+                [f"df['{i}'].astype(str)" for i in cmap.values()
                  if i != 'url' and i != 'filepath' and i != 'name'])
             )
         )['a']

@@ -83,6 +83,29 @@ class Deployment(Base):
     )
 
 
+class DeletedFile(Base):
+    __tablename__ = 'DeletedFile'
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    original_id = Mapped[int]
+    source = Mapped[int]
+    organization_id: Mapped[int] = mapped_column(
+        ForeignKey('Organization.id', ondelete='SET NULL'), nullable=True
+    )
+    deployment_id: Mapped[int] = mapped_column(
+        ForeignKey('Deployment.id', ondelete='SET NULL'), nullable=True
+    )
+    mooring_equipment_id: Mapped[int] = mapped_column(
+        ForeignKey('MooringEquipment.id', ondelete='SET NULL'), nullable=True
+    )
+
+    path: Mapped[str]
+    name: Mapped[Optional[str]]
+    description: Mapped[str]
+    uploaded: Mapped[int]
+    comments: Mapped[Optional[str]]
+
+
 class DeploymentContact(Base):
     __tablename__ = 'DeploymentContact'
 

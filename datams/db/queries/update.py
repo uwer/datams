@@ -54,8 +54,13 @@ def update_deployment(deployment_id, values: Dict[str, Any]):
         [update(Deployment).values(**values).where(Deployment.id == deployment_id)])
 
 
-def update_file(file_id, values):
-    query_all([update(File).values(**values).where(File.id == file_id)])
+# def update_file_orig(file_id, values):
+#     query_all([update(File).values(**values).where(File.id == file_id)])
+
+
+def update_files(values):
+    indexes = values.pop('indexes')
+    query_all([update(File).values(**values).where(File.id.in_(indexes))])
 
 
 def update_equipment(equipment_id, values: Dict[str, Any]):

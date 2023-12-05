@@ -1,10 +1,14 @@
 import functools
 from typing import Tuple, Any
+
+import pandas as pd
 from flask import Flask
 from celery import Celery, Task, shared_task
 
-from datams.redis import get_value, set_value, acquire_lock, release_lock, is_locked
-from datams.utils import remove_stale_files, update_and_append_to_checkins
+from datams.redis import (get_value, set_value, acquire_lock, release_lock, is_locked,
+                          remove_stale_vkeys)
+from datams.utils import (remove_stale_files, update_and_append_to_checkins,
+                          get_valid_checkins)
 from datams.db.queries.select import select_query
 
 #  Note in order to know if value is ready application can check if the
@@ -14,6 +18,7 @@ from datams.db.queries.select import select_query
 
 # NOTE: not the first argument of any methods decorated by this method should be `key`
 #       this determines which lock to use
+# TODO: Add ability to have multiple locks, but beware of dead-locking
 def requires_lock(_func=None, *, ignore_when_locked=False):
     def decorator_requires_lock(func):
         @functools.wraps(func)
@@ -21,11 +26,12 @@ def requires_lock(_func=None, *, ignore_when_locked=False):
             # print(f"key: {key}")
             # print(f"args: {args}")
             # print(f"kwargs: {kwargs}")
+            was_locked = is_locked(key)
+            acquire_lock(key)
             retval = None
-            if not ignore_when_locked or not is_locked(key):
-                acquire_lock(key)
+            if not (was_locked and ignore_when_locked):
                 retval = func(key, *args, **kwargs)
-                release_lock(key)
+            release_lock(key)
             return retval
         return wrapper_requires_lock
     if _func is None:
@@ -35,17 +41,27 @@ def requires_lock(_func=None, *, ignore_when_locked=False):
 
 
 # define background tasks
-@shared_task(name='compute_and_set')  # explicitly set task name because of wrapper
-@requires_lock(ignore_when_locked=True)
+@shared_task(name='compute_and_set')
+@requires_lock(ignore_when_locked=True)  # this still waits to get acquire the lock
 def compute_and_set_task(key) -> None:
     # NOTE: Currently this method assumes all data coming from select_query is a pandas
     #        Dataframe.
-    try:
-        # if key is not implemented, release the lock and ignore the request
-        value = select_query(data=key).to_json()
-        set_value(key, value)
-    except NotImplementedError:
-        pass
+    value = select_query(data=key).to_json()
+    set_value(key, value)
+
+
+@shared_task(name='set_vkey')
+def set_vkey_task(_, key):
+    root_key = '_'.join(key.split('_')[2:])
+    value = get_value(root_key).to_json()
+    set_value(key, value)
+
+
+@requires_lock
+def update_vkey(vkey):
+    root_key = '_'.join(vkey.split('_')[2:])
+    chain = (compute_and_set_task.s(root_key) | set_vkey_task.s(vkey))
+    chain()
 
 
 @shared_task(name='update')
@@ -60,10 +76,13 @@ def update_task(key, value: Any) -> None:
     set_value(key, method(key, value))
 
 
-@shared_task(name='remove_stale_files')
+@shared_task(name='remove_stales')
 @requires_lock
-def remove_stale_files_task(key) -> None:
-    remove_stale_files(get_value('checkins'))
+def remove_stales_task(key) -> None:
+    valid_uids = [uid for uid, _ in get_valid_checkins(get_value('checkins'))]
+    remove_stale_files(valid_uids)
+    remove_stale_vkeys(valid_uids)
+
 
 
 def task_complete(key) -> bool:
@@ -93,9 +112,9 @@ def celery_init_app(app: Flask) -> Celery:
     # 5) start period task of removing stale files
     celery_app.conf.beat_schedule = {
         'remove_stale_files': {
-            'task': 'remove_stale_files',
+            'task': 'remove_stales',
             'schedule': app.config['DATA_FILES']['remove_stales_every'],
-            'args': ('remove_stale_files',),
+            'args': ('remove_stales',),
             # 'kwargs': dict(key='remove_stale_files')
         },
     }

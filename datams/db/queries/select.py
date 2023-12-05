@@ -109,28 +109,53 @@ def select_processed_files():
     ).reset_index(drop=True)
     df = df[['id', 'level', 'filename', 'owner', 'description', 'uploaded',
              'url', 'path']]
-    return df.drop(columns=['id']).rename(columns={'path': 'filepath'})
+    return df.rename(columns={'path': 'filepath'})
 
 
 def select_pending_files():
-    temp = [(f"{PENDING_DIRECTORY}/{f}", f) for f in os.listdir(PENDING_DIRECTORY)
-            if os.path.isfile(f"{PENDING_DIRECTORY}/{f}") and not f.startswith('.temp')]
-    filepaths = [p for p, _ in temp]
-    filenames = [f for _, f in temp]
-    # last_modifies = [
-    #     dt.datetime.fromtimestamp(
-    #         os.path.getmtime(f"{PENDING_DIRECTORY}/{f}")
-    #     ).strftime('%Y-%m-%d %H:%M:%S') for f in files
-    # ]
-    uploaded = [
-        dt.datetime.fromtimestamp(
-            float(f"{f.split('.')[1][:-6]}.{f.split('.')[1][-6:]}")
-        ).strftime('%Y-%m-%d %H:%M:%S') for f in filenames
-    ]
-    uploaded_bys = [f.split('.')[0] for f in filenames]
-    filenames = ['.'.join(f.split('.')[2:]) for f in filenames]
-    return pd.DataFrame({'filepath': filepaths, 'filename': filenames,
+    t = [(str(f), str(f.name())) for f in Path(PENDING_DIRECTORY).rglob('*')
+         if f.is_file() and not str(f.name()).startswith('.temp')]
+    filepaths, filenames, uploaded, uploaded_bys = [], [], [], []
+    for i in range(len(t)):
+        # TODO: Consider using a regular expression to validate the filename
+        try:
+            c_filepath, f = t[i]
+            c_filename = '.'.join(f[i].split('.')[2:])
+            c_uploaded = dt.datetime.fromtimestamp(
+                float(f"{f[i].split('.')[1][:-6]}.{f[i].split('.')[1][-6:]}")
+            ).strftime('%Y-%m-%d %H:%M:%S')
+            c_uploaded_by = f[i].split('.')[0]
+        except Exception:  # TODO: Use more specific errors i.e IndexError,
+                           #       RuntimeError, TypeError, etc.
+            c_filepath, c_filename = t[i]
+            c_uploaded = c_uploaded_by = None
+        filepaths.append(c_filepath)
+        filenames.append(c_filename)
+        uploaded.append(c_uploaded)
+        uploaded_bys.append(c_uploaded_by)
+    return pd.DataFrame({'id': [i for i in range(len(filepaths))],
+                         'filepath': filepaths, 'filename': filenames,
                          'uploaded': uploaded, 'uploaded_by': uploaded_bys})
+
+
+# def select_pending_files_orig():
+#     temp = [(f"{PENDING_DIRECTORY}/{f}", f) for f in os.listdir(PENDING_DIRECTORY)
+#             if os.path.isfile(f"{PENDING_DIRECTORY}/{f}") and not f.startswith('.temp')]
+#     filepaths = [p for p, _ in temp]
+#     filenames = [f for _, f in temp]
+#     # last_modifies = [
+#     #     dt.datetime.fromtimestamp(os.path.getmtime(f)).strftime('%Y-%m-%d %H:%M:%S')
+#     #     for f in filepaths
+#     # ]
+#     uploaded = [
+#         dt.datetime.fromtimestamp(
+#             float(f"{f.split('.')[1][:-6]}.{f.split('.')[1][-6:]}")
+#         ).strftime('%Y-%m-%d %H:%M:%S') for f in filenames
+#     ]
+#     uploaded_bys = [f.split('.')[0] for f in filenames]
+#     filenames = ['.'.join(f.split('.')[2:]) for f in filenames]
+#     return pd.DataFrame({'filepath': filepaths, 'filename': filenames,
+#                          'uploaded': uploaded, 'uploaded_by': uploaded_bys})
 
 
 def select_discovered_files():
@@ -160,26 +185,31 @@ def select_discovered_files():
         dt.datetime.fromtimestamp(os.path.getmtime(f)).strftime('%Y-%m-%d %H:%M:%S')
         for f in filepaths
     ]
-    return pd.DataFrame({'filepath': filepaths, 'filename': filenames,
+    return pd.DataFrame({'id': [i for i in range(len(filepaths))],
+                         'filepath': filepaths, 'filename': filenames,
                          'last_modified': last_modifies})
 
 
+# TODO: Follow similar conventions to the processed files
 def select_deleted_files():
-    temp = [(f"{DELETED_DIRECTORY}/{f}", f) for f in os.listdir(DELETED_DIRECTORY)
-            if os.path.isfile(f"{DELETED_DIRECTORY}/{f}")]
-    filepaths = [p for p, _ in temp]
-    filenames = [f for _, f in temp]
-    deleted = [
-        dt.datetime.fromtimestamp(
-            float(f"{f.split('.')[1][:-6]}.{f.split('.')[1][-6:]}")
-        ).strftime('%Y-%m-%d %H:%M:%S') for f in filenames
-    ]
-    deleted_bys = [f.split('.')[0] for f in filenames]
-    uploaded_bys = [f.split('.')[2] for f in filenames]
-    filenames = ['.'.join(f.split('.')[2:]) for f in filenames]
-    return pd.DataFrame({'filepath': filepaths, 'filename': filenames,
-                         'deleted': deleted, 'deleted_by': deleted_bys,
-                         'originally_uploaded_by': uploaded_bys})
+    return pd.DataFrame(columns=['id', 'filepath', 'filename', 'deleted', 'deleted_by',
+                                 'originally_uploaded_by'])
+    # temp = [(f"{DELETED_DIRECTORY}/{f}", f) for f in os.listdir(DELETED_DIRECTORY)
+    #         if os.path.isfile(f"{DELETED_DIRECTORY}/{f}")]
+    # filepaths = [p for p, _ in temp]
+    # filenames = [f for _, f in temp]
+    # deleted = [
+    #     dt.datetime.fromtimestamp(
+    #         float(f"{f.split('.')[1][:-6]}.{f.split('.')[1][-6:]}")
+    #     ).strftime('%Y-%m-%d %H:%M:%S') for f in filenames
+    # ]
+    # deleted_bys = [f.split('.')[0] for f in filenames]
+    # uploaded_bys = [f.split('.')[2] for f in filenames]
+    # filenames = ['.'.join(f.split('.')[2:]) for f in filenames]
+    # return pd.DataFrame({'id': [i for i in range(len(filepaths))]
+    #                      'filepath': filepaths, 'filename': filenames,
+    #                      'deleted': deleted, 'deleted_by': deleted_bys,
+    #                      'originally_uploaded_by': uploaded_bys})
 
 
 def select_mooring_equipment_id(mooring_id: int, equipment_id: int):

@@ -49,12 +49,12 @@ MAP_CONFIG = config['map']
 MENU_CONFIG = config['menu']
 
 upload_dir = APP_CONFIG['DATA_FILES']['upload_directory']
-DISCOVERY_DIRECTORY = APP_CONFIG['DATA_FILES']['discovery_directory']
 ALLOWED_UPLOAD_EXTENSIONS = APP_CONFIG['DATA_FILES']['allowed_extensions']
 
-PENDING_DIRECTORY = f"{upload_dir}/pending/"
-PROCESSED_DIRECTORY = f"{upload_dir}/processed/"
-DELETED_DIRECTORY = f"{upload_dir}/deleted/"
+DISCOVERY_DIRECTORY = os.path.realpath(APP_CONFIG['DATA_FILES']['discovery_directory'])
+PENDING_DIRECTORY = os.path.realpath(f"{upload_dir}/pending/")
+PROCESSED_DIRECTORY = os.path.realpath(f"{upload_dir}/processed/")
+DELETED_DIRECTORY = os.path.realpath(f"{upload_dir}/deleted/")
 REMOVE_STALES_EVERY = APP_CONFIG['DATA_FILES']['remove_stales_every']  # in seconds
 
 utc_offsets = sorted(
@@ -77,24 +77,30 @@ TIMEZONES_R = {str(float(v)): k for k, v in TIMEZONES.items()}
 
 
 def update_and_append_to_checkins(checkins, value):
-    now = dt.datetime.now().timestamp()
     upload_id, timestamp = value
-    checkins = [(uid, ts) for uid, ts in checkins if uid != upload_id and
-                (now - ts) < REMOVE_STALES_EVERY]  # remove old entries
-    checkins.append(value)  # append the value
+    # remove valid checkins with same upload_id as the new value
+    checkins = [(uid, ts) for uid, ts in get_valid_checkins(checkins)
+                if uid != upload_id]
+    checkins.append(value)  # append the new value
     return checkins
 
 
-def remove_stale_files(checkins):
+def get_valid_checkins(checkins):
+    # return checkins that haven't yet expired
     now = dt.datetime.now().timestamp()
-    checkins = [a[0] for a in checkins if (now - a[1]) < REMOVE_STALES_EVERY]
+    checkins = [a for a in checkins if (now - a[1]) < REMOVE_STALES_EVERY]
+    return checkins
+
+
+def remove_stale_files(valid_uids):
     temp_files = [f for f in os.listdir(PENDING_DIRECTORY)
                   if (os.path.isfile(f"{PENDING_DIRECTORY}/{f}") and
                       f.startswith('.temp'))]
     to_remove = [f"{PENDING_DIRECTORY}/{f}" for f in temp_files
-                 if '.'.join(f[6:].split('.')[:2]) not in checkins]
+                 if '.'.join(f[6:].split('.')[:2]) not in valid_uids]
     for f in to_remove:
-        os.remove(f)
+        if os.path.isfile(f):
+            os.remove(f)
 
 
 def current_timestamp():

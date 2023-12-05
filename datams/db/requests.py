@@ -188,8 +188,8 @@ def extract_equipment_fields(request, rtype):
 def extract_file_fields(request, rtype: str = 'default'):
     form_fields = {
         'ftype': ('ftype', str),
-        'filepaths': ('filepaths', eval),
-        'filenames': ('filenames', eval),
+        'indexes': ('indexes', eval),
+        'uploads_id': ('uploads_id', str),
         'description': ('description', str),
         'comments': ('comments', str),
         'level': ('level', str),

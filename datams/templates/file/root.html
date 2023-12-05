@@ -1,5 +1,5 @@
 {% set title = ('Files', None, None)%}
-{% set button = {'id': 'fileAddButton', 'class': 'btn btn-success btn-md', 'label': 'ADD FILES', 'target': 'fileAddModal', 'modal_target': True} %}
+{% set button = {'id': 'fileAddButton', 'class': 'btn btn-success btn-md', 'label': 'UPLOAD NEW', 'target': 'fileAddModal', 'modal_target': True} %}
 
 {% extends "root.html" %}
 
@@ -80,9 +80,9 @@ TODO: Add a paragraph or two of instructions on how this all works
        <button id="deletedRestoreButton" class="btn btn-success" type="button" onclick="restoreSelected('deletedFileTable')" disabled><b>Restore Selected</b></button>
        <button id="deletedRefreshButton" class="btn btn-primary ms-5" type="button" onclick="refreshList('deletedFileTable')"><b>Refresh List</b></button>
       </div>
-      <div class="d-block float-end">
+      {#<div class="d-block float-end">
        <button id="deletedPurgeButton" class="btn btn-danger" type="button" onclick="deleteSelected('deletedFileTable')" disabled><b>Purge Selected</b></button>
-      </div>
+      </div>#}
     </div>
     <div class="d-block w-100">
       {{ components.table('deletedFileTable', data['deleted_files'], columns=['filename', 'deleted', 'deleted_by', 'originally_uploaded_by']) }}
@@ -98,33 +98,48 @@ TODO: Add a paragraph or two of instructions on how this all works
 
 {% block scripts %}
 {{ scripts.set_form_options() }}
-{{ scripts.format_table('processedFileTable', dom="fliBpt", paging=True, pagelength=25, selectable=True, serverside=url_for('file.ajax', ftype='processed_files')) }}
-{{ scripts.format_table('pendingFileTable', dom="fliBpt", paging=True, lengthmenu=[[25, 50, 100, -1], [25, 50, 100, "All"]], pagelength=25, selectable=True, serverside=url_for('file.ajax', ftype='pending_files')) }}
-{{ scripts.format_table('discoveredFileTable', dom="fliBpt", paging=True, lengthmenu=[[25, 50, 100, -1], [25, 50, 100, "All"]], pagelength=25, selectable=True, serverside=url_for('file.ajax', ftype='discovered_files')) }}
-{{ scripts.format_table('deletedFileTable', dom="fliBpt", paging=True, lengthmenu=[[25, 50, 100, -1], [25, 50, 100, "All"]], pagelength=25, selectable=True, serverside=url_for('file.ajax', ftype='deleted_files')) }}
+{{ scripts.format_table('processedFileTable', dom="fliBpt", paging=True, pagelength=25, selectable=True, serverside=url_for('file.ajax', ftype='processed_files', uploads_id=data['uploads_id'])|safe) }}
+{{ scripts.format_table('pendingFileTable', dom="fliBpt", paging=True, lengthmenu=[[25, 50, 100, -1], [25, 50, 100, "All"]], pagelength=25, selectable=True, serverside=url_for('file.ajax', ftype='pending_files', uploads_id=data['uploads_id'])|safe) }}
+{{ scripts.format_table('discoveredFileTable', dom="fliBpt", paging=True, lengthmenu=[[25, 50, 100, -1], [25, 50, 100, "All"]], pagelength=25, selectable=True, serverside=url_for('file.ajax', ftype='discovered_files', uploads_id=data['uploads_id'])|safe) }}
+{{ scripts.format_table('deletedFileTable', dom="fliBpt", paging=True, lengthmenu=[[25, 50, 100, -1], [25, 50, 100, "All"]], pagelength=25, selectable=True, serverside=url_for('file.ajax', ftype='deleted_files', uploads_id=data['uploads_id'])|safe) }}
 <script type="application/javascript">
 
 monitorSelections();
 
+function disableButtons(buttons) {
+  for (let i=0; i<buttons.length; i++){
+    document.getElementById(buttons[i]).disabled = true;
+  }
+}
+
 function selectionChanged(e, dt, type, indexes) {
   let tid = e.currentTarget.id;
-  let num_selections = getSelections(tid).length;
+  let num_selections = getSelections(tid)[0].length;
+  // console.log(tid);
+  // console.log(getSelections(tid));
+  // console.log(num_selections);
   if (tid == 'processedFileTable') {
     document.getElementById('processedEditButton').disabled = (num_selections == 0);
     document.getElementById('processedDeleteButton').disabled = (num_selections == 0);
     document.getElementById('processedDownloadButton').disabled = (num_selections == 0);
     document.getElementById('processedDetailsButton').disabled = !(num_selections == 1);    
-  } else if (tid == 'pendingFileTable') {
+  } 
+  
+  else if (tid == 'pendingFileTable') {
     document.getElementById('pendingProcessButton').disabled = (num_selections == 0);
     document.getElementById('pendingDeleteButton').disabled = (num_selections == 0);
     document.getElementById('pendingDownloadButton').disabled = (num_selections == 0);
-  } else if (tid == 'discoveredFileTable') {
+  } 
+  
+  else if (tid == 'discoveredFileTable') {
     document.getElementById('discoveredProcessButton').disabled = (num_selections == 0);
     document.getElementById('discoveredDeleteButton').disabled = (num_selections == 0);
     document.getElementById('discoveredDownloadButton').disabled = (num_selections == 0);
-  } else { // == 'deletedFileTable'
+  } 
+  
+  else { // == 'deletedFileTable'
     document.getElementById('deletedRestoreButton').disabled = (num_selections == 0);
-    document.getElementById('deletedPurgeButton').disabled = (num_selections == 0);
+    //document.getElementById('deletedPurgeButton').disabled = (num_selections == 0);
   } 
   
 }
@@ -212,7 +227,8 @@ function deleteSelected(tid) {
   let selections = getSelections(tid);
 }
 function processSelected(tid) {
-  //TODO: reset the form values and set the hidden values to the indexes of the selections and the table that was used
+  // TODO: Lock in the current values of all the file dataframes
+  // TODO: reset the form values and set the hidden values to the indexes of the selections and the table that was used
   document.getElementById('level_default_option').selected = true;
   document.getElementById('description_default_option').selected = true;
   document.getElementById('organization_default_option').selected = true;
@@ -241,21 +257,34 @@ function processSelected(tid) {
   }
   
   //var filepaths = "['";
-  let filepaths = "['";
-  let filenames = "['";
+  //let filepaths = "['";
+  let indexes = "[";
+  //let filenames = "['";
+  
+  
   let table = tables.get(tid);
   table.rows({ selected: true, filter: 'none'}).every( function (rowIdx, tableLoop, rowLoop) {
     //console.log(files);
     //console.log(table.row(rowIdx).data()[3]);
-    filepaths = filepaths.concat(table.row(rowIdx).data()[100] + "', '");
-    filenames = filenames.concat(table.row(rowIdx).data()[101] + "', '");
+    //filepaths = filepaths.concat(table.row(rowIdx).data()[100] + "', '");
+    indexes = indexes.concat(table.row(rowIdx).data()[100] + ", ");
+    //filenames = filenames.concat(table.row(rowIdx).data()[101] + "', '");
   });
-  filepaths = filepaths.slice(0, -3).concat(']');
-  filenames = filenames.slice(0, -3).concat(']');
+  //filepaths = filepaths.slice(0, -3).concat(']');
+  if (indexes.length > 1) {
+    indexes = indexes.slice(0, -2)
+    //filenames = filenames.slice(0, -3)
+  }
+  indexes = indexes.concat(']');
+  //filenames = filenames.concat(']');
   //console.log(filepaths);
-  document.getElementById('filepaths').value = filepaths;
-  document.getElementById('filenames').value = filenames;
+  //document.getElementById('filepaths').value = filepaths;
+  //document.getElementById('filenames').value = filenames;
+  document.getElementById('indexes').value = indexes;
   //console.log(tables.get(tid).rows(getSelections(tid)).data())
+  //console.log(filepaths);
+  //console.log(filenames);
+  console.log(indexes);
   
 }
 
@@ -267,29 +296,37 @@ function downloadSelected(tid) {
   
 }
 function refreshList(tid) {
+  console.log(tid);
   if (tid == 'processedFileTable') {
     var bid = 'processedRefreshButton';
-    var refresh_url = "{{ url_for('file.refresh', ftype='processed_files') }}";
+    var button_ids = ['processedEditButton', 'processedRefreshButton', 'processedDownloadButton', 'processedDetailsButton', 'processedDeleteButton'];
+    var refresh_url = "{{ url_for('file.refresh', vkey='vkey_' + data['uploads_id'] + '_processed_files') }}";
   } 
   
   else if (tid == 'pendingFileTable') {
     var bid = 'pendingRefreshButton';
-    var refresh_url = "{{ url_for('file.refresh', ftype='pending_files') }}";
+    var button_ids = ['pendingProcessButton', 'pendingRefreshButton', 'pendingDownloadButton', 'pendingDeleteButton'];
+    var refresh_url = "{{ url_for('file.refresh', vkey='vkey_' + data['uploads_id'] + '_pending_files') }}";
   } 
   
-  else if ('discoveredFileTable') {
+  else if (tid == 'discoveredFileTable') {
     var bid = 'discoveredRefreshButton';
-    var refresh_url = "{{ url_for('file.refresh', ftype='discovered_files') }}";
+    var button_ids = ['discoveredProcessButton', 'discoveredRefreshButton', 'discoveredDownloadButton', 'discoveredDeleteButton'];
+    var refresh_url = "{{ url_for('file.refresh', vkey='vkey_' + data['uploads_id'] + '_discovered_files') }}";
   }
-  
-  else { // deletedFileTable
+  else { // tid == 'deletedFileTable'
     var bid = 'deletedRefreshButton';
-    var refresh_url = "{{ url_for('file.refresh', ftype='deleted_files') }}";
-  } 
-
+    var button_ids = ['deletedRestoreButton', 'deletedRefreshButton'];
+    var refresh_url = "{{ url_for('file.refresh', vkey='vkey_' + data['uploads_id'] + '_deleted_files') }}";
+  }
+  console.log(bid);
+  console.log(refresh_url);
+  
+  // disable all relevant buttons
+  disableButtons(button_ids);
   // add loading spinner to refresh button and disable
   let refresh_button = document.getElementById(bid);
-  refresh_button.disabled = true;
+  //refresh_button.disabled = true;
   refresh_button.style.minWidth = refresh_button.offsetWidth.toString() + 'px';
   refresh_button.innerHTML = refresh_loader.innerHTML;
   
@@ -308,20 +345,22 @@ function refresh_when_ready(tid){
   console.log('refresh_when_ready');
   if (tid == 'processedFileTable') {
     var bid = 'processedRefreshButton';
-    var ready_url = "{{ url_for('file.ready', ftype='processed_files') }}";
+    var ready_url = "{{ url_for('file.ready', vkey='vkey_' + data['uploads_id'] + '_processed_files') }}";
   } 
   
   else if (tid == 'pendingFileTable') {
     var bid = 'pendingRefreshButton';
-    var ready_url = "{{ url_for('file.ready', ftype='pending_files') }}";
+    var ready_url = "{{ url_for('file.ready', vkey='vkey_' + data['uploads_id'] + '_pending_files') }}";
   } 
-  else if ('discoveredFileTable') {
+  
+  else if (tid == 'discoveredFileTable') {
     var bid = 'discoveredRefreshButton';
-    var ready_url = "{{ url_for('file.ready', ftype='discovered_files') }}";
+    var ready_url = "{{ url_for('file.ready', vkey='vkey_' + data['uploads_id'] + '_discovered_files') }}";
   }
-  else { // deletedFileTable
+  
+  else { // tid == deletedFileTable
     var bid = 'deletedRefreshButton';
-    var refresh_url = "{{ url_for('file.ready', ftype='deleted_files') }}";
+    var ready_url = "{{ url_for('file.ready', vkey='vkey_' + data['uploads_id'] + '_deleted_files') }}";
   } 
   
   let refresh_button = document.getElementById(bid);
@@ -337,6 +376,8 @@ function refresh_when_ready(tid){
       console.log(tid)
       console.log(tables.get(tid));
       tables.get(tid).ajax.reload();
+      
+      //tables.get(tid).trigger('deselect');
       //tables[tid].ajax.reload();
     }
     else {

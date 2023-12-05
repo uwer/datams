@@ -49,8 +49,20 @@
     <input type="textarea" class="form-control" name="comments" id="comments">
   </div>
   <input id="ftype" name="ftype" type="hidden"  value="">
+  {# TODO: Implement using index rather than path, but we would need to freeze our current list 
+  to know they corresponded to the correct rows.  
+  
+  We currently get around this by using filepath instead.  filename can't be used because these 
+  don't have to be unique.  We use a check that the path is actually in the file set so that 
+  the user isn't unintended files around, but would rather not supply the path to the browser
+  as this reveals server-side structures we'd rather not reveal.  
+  #}
+  {#
   <input id="filepaths" name="filepaths" type="hidden" value="">
   <input id="filenames" name="filenames" type="hidden" value="">
+  #}
+  <input id="indexes" name="indexes" type="hidden" value="">
+  <input id="uploads_id" name="uploads_id" type="hidden" value="{{ data['uploads_id'] }}">
   <div class="col-md-2">
     <button id="submitButton" type="submit" class="btn btn-primary">Submit</button>
   </div>
