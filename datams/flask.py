@@ -29,8 +29,11 @@ def flask_init_app(name, test_config=None):
         return dict(
             google_api_key=app.config['GOOGLE_API_KEY'],
             pd=pd,
-            # set the polling frequency to twice as often as the remove_stales
-            polling_freq=round(app.config['DATA_FILES']['remove_stales_every'] * 500),
+            # set the polling frequency to 4 times as often as the remove_stales
+            # or every 10 second whichever is less
+            polling_freq=min(
+                round(app.config['DATA_FILES']['remove_stales_every'] * 250), 10000
+            ),
         )
 
     # 5) add the root route

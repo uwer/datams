@@ -4,6 +4,7 @@ import pandas as pd
 from math import floor, log, cos, pi
 from sqlalchemy import create_engine
 
+DIRECTORY_LIMIT = 65000
 
 class MissingRequiredDataError(Exception):
     """
@@ -19,8 +20,48 @@ class MissingRequiredDataError(Exception):
         super().__init__(self.message)
 
 
+def resolve_filename(filename, directory):
+    i = 0
+    new_filename = filename
+    while new_filename in os.listdir(directory):
+        fl = filename.split('.')
+        new_filename = (f"{'.'.join(fl[:-1])} ({i}).{fl[-1]}"
+                        if len(fl) > 1 else f"{filename} ({i})")
+        i += 1
+    return new_filename
+
+
+def is_int_directory(directory):
+    try:
+        int(directory)
+    except TypeError:
+        return False
+    return True
+
+
+def check_directory_fullness(root_dir, cdir_idx, cdir_count):
+    cdir = f"{root_dir}/{cdir_idx}"
+    while cdir_count >= DIRECTORY_LIMIT:
+        cdir_idx += 1
+        cdir = f"{root_dir}/{cdir_idx}"
+        os.makedirs(cdir, exist_ok=True)
+        cdir_count = len(os.listdir(cdir))
+    return cdir, cdir_idx, cdir_count
+
+
+def resolve_directory(root_dir):
+    int_dirs = [i for i in os.listdir(root_dir)
+                if os.path.isdir(f"{root_dir}/{i}") and is_int_directory(i)]
+    cdir_idx = max(int_dirs) if int_dirs else 0
+    cdir = f"{root_dir}/{cdir_idx}"
+    if not int_dirs:
+        os.makedirs(cdir, exist_ok=True)
+    cdir_count = len(os.listdir(cdir))
+    return check_directory_fullness(root_dir, cdir_idx, cdir_count)
+
+
 def create_upload_directories(path):
-    for d in {'pending', 'processed', 'deleted'}:
+    for d in {'pending', 'processed'}:
         try:
             os.makedirs(f"{path}/{d}", exist_ok=True)
         except OSError:

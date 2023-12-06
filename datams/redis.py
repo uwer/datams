@@ -6,6 +6,7 @@ from typing import Union, Any
 from datams.utils import APP_CONFIG, REMOVE_STALES_EVERY
 import datetime as dt
 import time
+import functools
 
 
 import logging
@@ -17,6 +18,27 @@ log.setLevel(logging.DEBUG)
 RETRY_INTERVAL = dict(checkins=0.05, default=0.05)  # seconds
 # should only be relevant thread crashes
 LOCK_EXPIRY = dict(checkins=10, default=60)  # seconds
+
+
+# NOTE: not the first argument of any methods decorated by this method should be `key`
+#       this determines which lock to use
+# TODO: Implement the locking in a better more robust manner
+# TODO: Implement require lock to be used with the `with` statement to ensure the lock
+#       is released
+# TODO: Add ability to have multiple locks, but beware of dead-locking
+def requires_lock(_func=None, *, unused_arg=None):
+    def decorator_requires_lock(func):
+        @functools.wraps(func)
+        def wrapper_requires_lock(key, *args, **kwargs):
+            acquire_lock(key)
+            retval = func(key, *args, **kwargs)
+            release_lock(key)
+            return retval
+        return wrapper_requires_lock
+    if _func is None:
+        return decorator_requires_lock
+    else:
+        return decorator_requires_lock(_func)
 
 
 def get_redis(app: Flask = None) -> Redis:
@@ -35,6 +57,23 @@ def is_locked(key: str):
     # return True if key is locked otherwise return False
     redis = get_redis()
     return True if redis.exists(f"{key}_lock") == 1 else False
+
+
+def is_working(key: str):
+    # return False if key exists otherwise return True
+    redis = get_redis()
+    return True if redis.exists(f"{key}_working") == 1 else False
+
+
+def set_working(key: str):
+    redis = get_redis()
+    redis.set(f"{key}_working", 'y')
+    return
+
+
+def set_finished(key: str):
+    delete_key(f"{key}_working")
+    return
 
 
 def acquire_lock(key: str):
@@ -63,6 +102,7 @@ def delete_key(key: str):
     return
 
 
+@requires_lock
 def set_value(key, value) -> None:
     # locking is preformed within the celery tasks that call this method
     # it is assumed that caller has acquired the lock before calling this method

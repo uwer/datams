@@ -14,7 +14,7 @@ def update_query(table, values, **kwargs):
     elif table == 'Equipment':
         update_equipment(kwargs['equipment_id'], values)
     elif table == 'File':
-        update_file(kwargs['file_id'], values)
+        update_files(kwargs['file_id'], values)
     elif table == 'Mooring':
         update_mooring(kwargs['mooring_id'], values)
     elif table == 'Organization':
@@ -53,8 +53,7 @@ def update_deployment(deployment_id, values: Dict[str, Any]):
     query_all(
         [update(Deployment).values(**values).where(Deployment.id == deployment_id)])
 
-
-# def update_file_orig(file_id, values):
+# def update_file(file_id, values):
 #     query_all([update(File).values(**values).where(File.id == file_id)])
 
 

@@ -5,7 +5,7 @@ import pandas as pd
 from sqlalchemy import select, text, func, literal_column, String
 
 from datams.utils import (MENU_CONFIG, TIMEZONES, DISCOVERY_DIRECTORY,
-                          PENDING_DIRECTORY, DELETED_DIRECTORY)
+                          PENDING_DIRECTORY)
 from datams.db.core import query_df, query_first_df, query_first
 from datams.db.tables import (
     Contact, Country, Deployment, DeploymentContact, DeploymentOrganization, File,
@@ -15,7 +15,6 @@ from datams.db.formatting import (
     contact_format, deployment_format, organization_format, mooring_format,
     equipment_format, file_format, deleted_file_format
 )
-
 import logging
 
 logging.basicConfig()

@@ -1,14 +1,17 @@
 import os
+import pandas as pd
 import datetime as dt
-from flask import (Blueprint, render_template, request, redirect, url_for, send_file,
+from flask import (Blueprint, render_template, request, redirect, send_file, url_for,
                    jsonify, make_response)
 from flask_login import login_required, current_user
-from datams.celery import (update_task, compute_and_set_task, task_complete, update_vkey)
+from datams.celery import (update_task, compute_and_set_task, task_complete,
+                           update_vkey, set_working)
 from datams.redis import get_value
-from datams.db.views import (file_root, file_details, file_edit)  # , file_download,
-                             # file_delete)  # file_add, file_pending
+from datams.db.views import file_root, file_details
 from datams.db.requests import parse_request
 from datams.db.datatables import fetch
+from datams.db.utils import (resolve_filename, resolve_directory,
+                             check_directory_fullness)
 from datams.utils import PENDING_DIRECTORY, PROCESSED_DIRECTORY
 from werkzeug.utils import secure_filename
 from datams.db.queries.insert import insert_files
@@ -24,53 +27,12 @@ logging.basicConfig()
 log = logging.getLogger()
 log.setLevel(logging.DEBUG)
 
-DIRECTORY_LIMIT = 65000
-CHUNK_SIZE = 1000000  # ~1MB
+# CHUNK_SIZE = 1000000  # ~1MB
 
 
 bp = Blueprint('file', __name__, url_prefix='/file')
 
-
-def resolve_filename(filename, directory):
-    i = 0
-    new_filename = filename
-    while new_filename in os.listdir(directory):
-        fl = filename.split('.')
-        new_filename = (f"{'.'.join(fl[:-1])} ({i}).{fl[-1]}"
-                        if len(fl) > 1 else f"{filename} ({i})")
-        i += 1
-    return new_filename
-
-
-def is_int_directory(directory):
-    try:
-        int(directory)
-    except TypeError:
-        return False
-    return True
-
-
-def check_directory_fullness(root_dir, cdir_idx, cdir_count):
-    cdir = f"{root_dir}/{cdir_idx}"
-    while cdir_count >= DIRECTORY_LIMIT:
-        cdir_idx += 1
-        cdir = f"{root_dir}/{cdir_idx}"
-        os.makedirs(cdir, exist_ok=True)
-        cdir_count = len(os.listdir(cdir))
-    return cdir, cdir_idx, cdir_count
-
-
-def resolve_directory(root_dir):
-    int_dirs = [i for i in os.listdir(root_dir)
-                if os.path.isdir(f"{root_dir}/{i}") and is_int_directory(i)]
-    cdir_idx = max(int_dirs) if int_dirs else 0
-    cdir = f"{root_dir}/{cdir_idx}"
-    if not int_dirs:
-        os.makedirs(cdir, exist_ok=True)
-    cdir_count = len(os.listdir(cdir))
-    return check_directory_fullness(root_dir, cdir_idx, cdir_count)
-
-
+# TODO: Put the query code from methods process, delete into the appropriate files
 # TODO: look into using celery with parallel chunk downloading to speed things up
 # TODO: Use multiprocessing to speed things up and start assembling the file in
 #       memory
@@ -137,7 +99,9 @@ def submit():
             cdir, cdir_idx, cdir_count = resolve_directory(PENDING_DIRECTORY)
             f_new = resolve_filename(f[6:], cdir)
             os.rename(f"{PENDING_DIRECTORY}/{f}", f"{cdir}/{f_new}")
-    return redirect(request.referrer)
+        set_working('pending_files')
+        compute_and_set_task.delay('pending_files')
+    return redirect(f"{url_for('file.root')}?activetab=nav-pending-uploads")
 
 
 @bp.route('/cancel', methods=('POST',))
@@ -159,6 +123,7 @@ def cancel():
 def delete():
     values = parse_request(request, table='File', rtype='delete')
     ftype, uploads_id = values.pop('ftype'), values.pop('uploads_id')
+    active_tab = 'nav-processed'
     if ftype == 'processed_files':
         indexes = values.pop('indexes')
         # get all the indexes from the table
@@ -174,8 +139,13 @@ def delete():
         # insert these into deleted files and remove these from the File table
         query_all([insert(DeletedFile).values(**v) for v in values] +
                   [sdelete(File).where(File.id.in_(indexes))])
+        set_working('processed_files')
+        set_working('deleted_files')
+        compute_and_set_task.delay('processed_files')
+        compute_and_set_task.delay('deleted_files')
 
     elif ftype == 'pending_files':
+        active_tab = 'nav-pending-uploads'
         indexes = values.pop('indexes')
         # get all the indexes from the table
         df = get_value(f"vkey_{uploads_id}_pending_files").drop(columns=['uploaded_by'])
@@ -191,8 +161,12 @@ def delete():
         values = [v for v in df.transpose().to_dict().values()]
         # insert these into deleted files and remove these from the File table
         query_all([insert(DeletedFile).values(**v) for v in values])
+        set_working('pending_files')
+        set_working('deleted_files')
+        compute_and_set_task.delay('pending_files')
+        compute_and_set_task.delay('deleted_files')
 
-    return redirect(request.referrer)
+    return redirect(f"{url_for('file.root')}?activetab={active_tab}")
 
 
 @bp.route('/restore', methods=('POST',))
@@ -212,13 +186,29 @@ def restore():
           .rename(columns={'original_id': 'id'})
     )
     df = df.loc[df['ftype'] == 'processed_file', :].drop(columns=['ftype'])
-    values = [v for v in df.transpose().to_dict().values()]
+    refresh_processed = df.shape[0] != 0
+    # values = [v for v in df.transpose().to_dict().values()]
+    values = []
+    for entry in df.transpose().to_dict().values():
+        value = {}
+        for k, v in entry.items():
+            if not pd.isna(v):
+                value[k] = v
+        values.append(value)
     # insert these into files and remove these from the DeletedFile table
     # FIXME: When trying to restore this will cause problems if the foreign keys no
     #        longer exist
     query_all([insert(File).values(**v) for v in values] +
               [sdelete(DeletedFile).where(DeletedFile.id.in_(indexes))])
-    return redirect(request.referrer)
+    set_working('pending_files')
+    set_working('deleted_files')
+    if refresh_processed:
+        set_working('processed_files')
+    compute_and_set_task.delay('pending_files')
+    compute_and_set_task.delay('deleted_files')
+    if refresh_processed:
+        compute_and_set_task.delay('processed_files')
+    return redirect(f"{url_for('file.root')}?activetab=nav-deleted")
 
 
 # TODO: Figure out why there seems to be a delay in updating these within the view
@@ -229,10 +219,14 @@ def process():
     values = parse_request(request, table='File', rtype='process')
     ftype, uploads_id = values.pop('ftype'), values.pop('uploads_id')
 
+    active_tab = 'nav-processed'
     if ftype == 'processed_files':
         update_files(values)
+        set_working('processed_files')
+        compute_and_set_task.delay('processed_files')
 
     if ftype == 'pending_files':
+        active_tab = 'nav-pending-uploads'
         indexes = values.pop('indexes')
         df = get_value(f"vkey_{uploads_id}_pending_files")
         cdir, cdir_idx, cdir_count = resolve_directory(PROCESSED_DIRECTORY)
@@ -264,8 +258,13 @@ def process():
             # rollback all the renames
             for path_orig, path_new in moves:
                 os.rename(path_new, path_orig)
+        set_working('processed_files')
+        set_working('pending_files')
+        compute_and_set_task.delay('processed_files')
+        compute_and_set_task.delay('pending_files')
 
     elif ftype == 'discovered_files':
+        active_tab = 'nav-pending-discoveries'
         indexes = values.pop('indexes')
         df = get_value(f"vkey_{uploads_id}_discovered_files")
         touches, paths, names = [], [], []
@@ -295,24 +294,23 @@ def process():
             # rollback all the touches
             for touch in touches:
                 os.remove(touch)
+        set_working('processed_files')
+        set_working('discovered_files')
+        compute_and_set_task.delay('processed_files')
+        compute_and_set_task.delay('discovered_files')
 
-    compute_and_set_task.delay('pending_files')
-    compute_and_set_task.delay('discovered_files')
-    compute_and_set_task.delay('processed_files')
     # TODO: Implement this will take the information it needs from the form
-    return redirect(request.referrer)
+    return redirect(f"{url_for('file.root')}?activetab={active_tab}")
 
 
 @bp.route("/download", methods=('GET',))
 @login_required
 def download():
     request_values = request.values
-
-    uploads_id = request_values['uploads_id']
+    uploads_id = request_values.get('uploads_id')
     ftype = request_values['ftype']
     index = int(request_values['index'])
-
-    df = get_value(f"vkey_{uploads_id}_{ftype}")
+    df = get_value(ftype) if uploads_id is None else get_value(f"vkey_{uploads_id}_{ftype}")
     filepath, filename = tuple(
         df.loc[df['id'] == index, ['filepath', 'filename']].iloc[0]
     )
@@ -331,6 +329,46 @@ def details():
         return redirect(request.referrer)
     return render_template('file/details.html', data=data)
 
+
+@bp.route('/', methods=('GET',))
+@login_required
+def root():
+    request_values = request.values
+    active_tab = request_values.get('activetab')
+    if (active_tab is None) or (
+        active_tab not in ['nav-processed', 'nav-pending-uploads',
+                           'nav-pending-discoveries', 'nav-deleted']):
+        active_tab = 'nav-processed'
+    data = file_root()
+    data['uploads_id'] = f"{current_user.username}.{data['timestamp_str']}"
+    data['active_tab'] = active_tab
+    return render_template('file/root.html', data=data)
+
+
+# The routes below are used to execute background tasks
+@bp.route("/refresh/<vkey>", methods=('GET',))
+@login_required
+def refresh(vkey: str):
+    set_working(vkey)
+    update_vkey(vkey)
+    return make_response((f"Request for refresh submitted", 200))
+
+
+@bp.route("/ready/<key>", methods=('GET',))
+@login_required
+def ready(key):
+    is_ready = task_complete(key)
+    return jsonify(dict(ready=is_ready))
+
+
+@bp.route("/ajax", methods=('GET',))
+@login_required
+def ajax():
+    # This routes below provide server-side computations for datatables (used by files)
+    return jsonify(fetch(request))
+
+# TODO: Take the chunking part out of this and put it into downloads, but keep it
+#       commented out until there is time to implement it
 # @bp.route("/download", methods=('GET',))
 # @login_required
 # def download():
@@ -358,279 +396,13 @@ def details():
 #                 yield f.read(chunk)
 #     return generate(), header
 
-
-@bp.route('/', methods=('GET',))
-@login_required
-def root():
-    data = file_root()
-    data['uploads_id'] = f"{current_user.username}.{data['timestamp_str']}"
-    # create_file_vkeys_task.delay(data['uploads_id'])
-    return render_template('file/root.html', data=data)
-
-
-# The routes below are used to execute background tasks
-@bp.route("/refresh/<vkey>", methods=('GET',))
-@login_required
-def refresh(vkey: str):
-    update_vkey(vkey)
-    return make_response((f"Request for refresh submitted", 200))
-
-
-@bp.route("/ready/<vkey>", methods=('GET',))
-@login_required
-def ready(vkey):
-    is_ready = task_complete(vkey)
-    return jsonify(dict(ready=is_ready))
-
-
-@bp.route("/ajax", methods=('GET',))
-@login_required
-def ajax():
-    # This routes below provide server-side computations for datatables (used by files)
-    return jsonify(fetch(request))
-
-
-
-# -------------------------------------------------------------------------------------
-# -------------------------------------------------------------------------------------
-# -------------------------------------------------------------------------------------
-# -------------------------------------------------------------------------------------
-# TODO: Consider removing the following
-
-@bp.route('/edit/<fid>', methods=('GET', 'POST'))
-@login_required
-def edit(fid: int):
-    data = file_edit(fid, request)
-    if request.method == 'GET' and data:
-        return render_template('file/edit.html', data=data)
-    elif request.method == 'POST':
-        return redirect(url_for('file.edit', fid=fid))
-    else:
-        return redirect(url_for('file.root'))
-
-# @bp.route("/pending", methods=('GET', 'POST'))
+# @bp.route('/edit/<fid>', methods=('GET', 'POST'))
 # @login_required
-# def pending():
-#     # TODO: Add the pending files in here too
-#     data = dict(files=get_discovered_files())
-#     return render_template('file/pending.html', data=data)
-
-# TODO: Do we need these?
-# @bp.route("/pending_datatable", methods=('GET',))
-# @login_required
-# def pending_datatable():
-#     return jsonify(pending_files(request))
-#
-#
-# @bp.route("/test_datatable", methods=('GET', 'POST'))
-# @login_required
-# def test_datatable():
-#     return jsonify(test_files(request))
-
-# @bp.route("/ajax_processed", methods=('GET',))
-# @login_required
-# def ajax_processed():
-#     return jsonify(fetch('processed_files', request))
-#
-#
-# @bp.route("/ajax_pending", methods=('GET',))
-# @login_required
-# def ajax_pending():
-#     return jsonify(fetch('pending_files', request))
-#
-#
-# @bp.route("/ajax_discovered", methods=('GET',))
-# @login_required
-# def ajax_discovered():
-#     return jsonify(fetch('discovered_files', request))
-#
-#
-# @bp.route("/ajax_deleted", methods=('GET',))
-# @login_required
-# def ajax_deleted():
-#     return jsonify(fetch('deleted_files', request))
-
-
-# # The routes below provide server-side options for datatables
-# @bp.route("/processed_datatable", methods=('GET',))
-# @login_required
-# def processed_datatable():
-#     return jsonify(processed_files(request))
-#
-#
-# @bp.route("/discovered_datatable", methods=('GET',))
-# @login_required
-# def discovered_datatable():
-#     return jsonify(discovered_files(request))
-
-
-
-# @bp.route('/process', methods=('POST',))
-# @login_required
-# def process_orig():
-#     values = parse_request(request, table='File', rtype='process')
-#
-#     ftype = values.pop('ftype')
-#     filepaths = [f for f in reversed(values.pop('filepaths'))]
-#     filenames = values.pop('filenames')
-#
-#     assert len(filepaths) == len(filenames)
-#     end_idx = len(filepaths) - 1
-#
-#     if ftype == 'processed_files':
-#         # update the entry in the database with new details
-#         # template can then call the refresh method (for the table)
-#         pass
-#
-#     if ftype == 'pending_files':
-#         # figure out what the largest number directory is in the processed directory
-#         all_dirs = [i for i in os.listdir(PROCESSED_DIRECTORY)
-#                     if os.path.isdir(f"{PROCESSED_DIRECTORY}/{i}")]
-#         final_dirs = []
-#         for d in all_dirs:
-#             try:
-#                 final_dirs.append(int(d))
-#             except TypeError:
-#                 pass
-#
-#         curr_dir_index = max(final_dirs) if final_dirs else 0
-#         curr_dir = f"{PROCESSED_DIRECTORY}/{curr_dir_index}"
-#         if not final_dirs:
-#             os.makedirs(curr_dir)
-#         curr_dir_count = len(os.listdir(curr_dir))
-#
-#         new_filepaths = []
-#         for idx, path in enumerate(filepaths):
-#             if os.path.exists(path):
-#                 file = secure_filename(os.path.basename(path))
-#                 curr_dir_count += 1
-#                 if curr_dir_count > 65000:
-#                     curr_dir_index += 1
-#                     curr_dir = f"{PROCESSED_DIRECTORY}/{curr_dir_index}"
-#                     os.makedirs(curr_dir)
-#                     curr_dir_count = 0
-#                 try:
-#                     new_path = f"{curr_dir}/{file}"
-#                     os.rename(path, new_path)
-#                     new_filepaths.append(new_path)
-#                 except Exception as error:  # should make this more specific
-#                     curr_dir_count -= 1
-#                     filenames.pop(end_idx - idx)
-#                     log.error(error)
-#             else:
-#                 filenames.pop(end_idx - idx)
-#
-#         values['paths'] = [f for f in reversed(new_filepaths)]
-#         values['names'] = filenames
-#         insert_files(values)
-#         # TODO: Refresh the pending and processed file lists
-#
-#
-#         # from the current number of files in the submitted directory
-#         # if it is greater than
-#         # for each file
-#         # try moving the file into the pro
-#         # move the file to the processed file directory
-#
-#
-#     if ftype == 'discovered_files':
-#         pass
-#         # log.debug(values['tid'])
-#         # log.debug(values['paths'])
-#         # values['description']
-#         # values['comments']
-#         # values['level']
-#         # values['uploaded']
-#
-#     # TODO: Implement this will take the information it needs from the form
-#     return redirect(request.referrer)
-
-
-# # TODO: Put this code into view.py or somewhere more appropriate.
-# @bp.route('/process', methods=('POST',))
-# @login_required
-# def process_orig2():
-#     values = parse_request(request, table='File', rtype='process')
-#     ft, fp, fn = values.pop('ftype'), values.pop('filepaths'), values.pop('filenames')
-#     assert len(fp) == len(fn)
-#     if ft == 'pending_files':
-#         df = get_value('pending_files')
-#         filepaths, filenames, renames, skipped = [], [], [], []
-#         cdir, cdir_idx, cdir_count = resolve_directory(PROCESSED_DIRECTORY)
-#         for idx, p in enumerate(fp):
-#             cdir, cdir_idx, cdir_count = check_directory_fullness(
-#                 PROCESSED_DIRECTORY, cdir_idx, cdir_count
-#             )
-#             if os.path.exists(p) and p in list(df['path']):
-#                 file = secure_filename(os.path.basename(p))
-#                 new_path = f"{cdir}/{file}"
-#                 # TODO: Have a way to roll this back if the database insertion fails
-#                 try:
-#                     os.rename(p, new_path)
-#                     renames.append((new_path, p))
-#                     filepaths.append(new_path)
-#                     filenames.append(fn[idx])
-#                     cdir_count += 1
-#                 except Exception as error:  # TODO: use specific errors
-#                     log.error(error)
-#             else:
-#                 skipped.append(fn[idx])
-#
-#         values['paths'] = filepaths
-#         values['names'] = filenames
-#         try:
-#             insert_files(values)
-#         except Exception as error:  # TODO: use specific errors
-#             log.error(error)
-#             # rollback all the renames
-#             for new_path, old_path in renames:
-#                 os.rename(new_path, old_path)
-#
-#         # TODO: Refresh the pending and processed file lists
-#
-#     elif ft == 'processed_files':
-#         # update the entry in the database with new details
-#         # template can then call the refresh method (for the table)
-#         pass
-#
-#         # from the current number of files in the submitted directory
-#         # if it is greater than
-#         # for each file
-#         # try moving the file into the pro
-#         # move the file to the processed file directory
-#
-#
-#     if ft == 'discovered_files':
-#         pass
-#
-#     # TODO: Implement this will take the information it needs from the form
-#     return redirect(request.referrer)
-
-# @bp.route('/delete/<fid>', methods=('POST',))
-# @login_required
-# def delete_orig(fid: int):
-#     file_delete(fid)
-#     return redirect(request.referrer)
-
-
-# @bp.route("/download/<fid>&<dl>", methods=('GET',))
-# @login_required
-# def download_orig(fid, dl):
-#     dl = True if dl == 'True' else False
-#     data = file_download(fid)
-#     if not data:
-#         return redirect(request.referrer)
-#     try:
-#         path, filename = tuple(data['file'])
-#         return send_file(os.path.realpath(path), as_attachment=dl,
-#                          download_name=filename)
-#     except Exception as e:
-#         return str(path)
-
-# @bp.route('/details/<fid>', methods=('GET',))
-# @login_required
-# def details(fid: int):
-#     data = file_details(fid)
-#     if not data:
-#         return redirect(request.referrer)
-#     return render_template('file/details.html', data=data)
+# def edit(fid: int):
+#     data = file_edit(fid, request)
+#     if request.method == 'GET' and data:
+#         return render_template('file/edit.html', data=data)
+#     elif request.method == 'POST':
+#         return redirect(url_for('file.edit', fid=fid))
+#     else:
+#         return redirect(url_for('file.root'))

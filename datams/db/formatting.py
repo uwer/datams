@@ -142,7 +142,7 @@ def file_format(df, compute, level=None):
             dt.datetime.fromtimestamp(x).strftime('%Y-%m-%d %H:%M:%S')
         )
     if meets_requirements(compute, 'url', ['id'], df.columns):
-        df['url'] = df['id'].apply(lambda x: f"/file/details/{x}")
+        df['url'] = df['id'].apply(lambda x: f"/file/details?index={x}")
         # df['url'] = df['id'].apply(lambda x: url_for('dfile.details', fid=x))
 
     if meets_requirements(compute, 'filename', ['path', 'name'], df.columns):

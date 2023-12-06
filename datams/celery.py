@@ -5,8 +5,8 @@ import pandas as pd
 from flask import Flask
 from celery import Celery, Task, shared_task
 
-from datams.redis import (get_value, set_value, acquire_lock, release_lock, is_locked,
-                          remove_stale_vkeys)
+from datams.redis import (get_value, set_value, set_working, set_finished,
+                          remove_stale_vkeys, is_working, requires_lock, get_redis)
 from datams.utils import (remove_stale_files, update_and_append_to_checkins,
                           get_valid_checkins)
 from datams.db.queries.select import select_query
@@ -16,49 +16,28 @@ from datams.db.queries.select import select_query
 #  it is currently being computed and set
 
 
-# NOTE: not the first argument of any methods decorated by this method should be `key`
-#       this determines which lock to use
-# TODO: Add ability to have multiple locks, but beware of dead-locking
-def requires_lock(_func=None, *, ignore_when_locked=False):
-    def decorator_requires_lock(func):
-        @functools.wraps(func)
-        def wrapper_requires_lock(key, *args, **kwargs):
-            # print(f"key: {key}")
-            # print(f"args: {args}")
-            # print(f"kwargs: {kwargs}")
-            was_locked = is_locked(key)
-            acquire_lock(key)
-            retval = None
-            if not (was_locked and ignore_when_locked):
-                retval = func(key, *args, **kwargs)
-            release_lock(key)
-            return retval
-        return wrapper_requires_lock
-    if _func is None:
-        return decorator_requires_lock
-    else:
-        return decorator_requires_lock(_func)
-
-
 # define background tasks
 @shared_task(name='compute_and_set')
-@requires_lock(ignore_when_locked=True)  # this still waits to get acquire the lock
 def compute_and_set_task(key) -> None:
     # NOTE: Currently this method assumes all data coming from select_query is a pandas
     #        Dataframe.
+    set_working(key)
     value = select_query(data=key).to_json()
     set_value(key, value)
+    set_finished(key)
 
 
 @shared_task(name='set_vkey')
-def set_vkey_task(_, key):
-    root_key = '_'.join(key.split('_')[2:])
+def set_vkey_task(_, vkey):
+    set_working(vkey)
+    root_key = '_'.join(vkey.split('_')[2:])
     value = get_value(root_key).to_json()
-    set_value(key, value)
+    set_value(vkey, value)
+    set_finished(vkey)
 
 
-@requires_lock
 def update_vkey(vkey):
+    set_working(vkey)
     root_key = '_'.join(vkey.split('_')[2:])
     chain = (compute_and_set_task.s(root_key) | set_vkey_task.s(vkey))
     chain()
@@ -69,24 +48,24 @@ def update_vkey(vkey):
 def update_task(key, value: Any) -> None:
     # NOTE: if method isn't defined then value is simply set, but it is assumed that
     #       its type is compatible
+    redis = get_redis()
     methods = dict(
         checkins=lambda x, y: str(update_and_append_to_checkins(get_value(x), y)),
     )
-    method = methods.get(key, lambda x, y: y)
-    set_value(key, method(key, value))
+    new_value = methods.get(key, lambda x, y: y)(key, value)
+    # can't use the redis.set_value or we'll end up in deadlock
+    redis.set(key, new_value)
 
 
 @shared_task(name='remove_stales')
-@requires_lock
-def remove_stales_task(key) -> None:
+def remove_stales_task() -> None:
     valid_uids = [uid for uid, _ in get_valid_checkins(get_value('checkins'))]
     remove_stale_files(valid_uids)
     remove_stale_vkeys(valid_uids)
 
 
-
 def task_complete(key) -> bool:
-    return False if is_locked(key) else True
+    return False if is_working(key) else True
 
 
 def celery_init_app(app: Flask) -> Celery:
@@ -114,7 +93,7 @@ def celery_init_app(app: Flask) -> Celery:
         'remove_stale_files': {
             'task': 'remove_stales',
             'schedule': app.config['DATA_FILES']['remove_stales_every'],
-            'args': ('remove_stales',),
+            # 'args': ('remove_stales',),
             # 'kwargs': dict(key='remove_stale_files')
         },
     }

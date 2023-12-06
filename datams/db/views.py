@@ -209,16 +209,16 @@ def file_details(fid):
 #     load_pending_files()
 
 
-def file_edit(fid, request: flask.Request):
-    if request.method == 'GET':
-        kwargs = dict(view='file.edit', file_id=fid)
-        data_to_fetch = ['file', 'all_organizations', 'all_deployments', 'all_moorings',
-                         'all_equipment', 'all_levels', 'all_descriptions']
-        return fetch_data(data_to_fetch, **kwargs)
-    else:
-        values = parse_request(request, table='File', rtype='edit')
-        update_query(table='File', values=values, file_id=fid)
-        # load_processed_files()
+# def file_edit(fid, request: flask.Request):
+#     if request.method == 'GET':
+#         kwargs = dict(view='file.edit', file_id=fid)
+#         data_to_fetch = ['file', 'all_organizations', 'all_deployments', 'all_moorings',
+#                          'all_equipment', 'all_levels', 'all_descriptions']
+#         return fetch_data(data_to_fetch, **kwargs)
+#     else:
+#         values = parse_request(request, table='File', rtype='edit')
+#         update_query(table='File', values=values, file_id=fid)
+#         # load_processed_files()
 
 
 # def file_delete(fid):

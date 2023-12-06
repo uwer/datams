@@ -14,15 +14,15 @@ TODO: Add a paragraph or two of instructions on how this all works
 #}
 <nav>
   <div class="nav nav-tabs" id="nav-tab" role="tablist">
-    <button class="nav-link active" id="nav-processed-tab" data-bs-toggle="tab" data-bs-target="#nav-processed" type="button" role="tab" aria-controls="nav-processed" aria-selected="true">Processed</button>
-    <button class="nav-link" id="nav-pending-uploads-tab" data-bs-toggle="tab" data-bs-target="#nav-pending-uploads" type="button" role="tab" aria-controls="nav-pending-uploads" aria-selected="false">Pending Uploads</button>
-    <button class="nav-link" id="nav-pending-discoveries-tab" data-bs-toggle="tab" data-bs-target="#nav-pending-discoveries" type="button" role="tab" aria-controls="nav-pending-discoveries" aria-selected="false">Pending Discoveries</button>
-    <button class="nav-link" id="nav-deleted-tab" data-bs-toggle="tab" data-bs-target="#nav-deleted" type="button" role="tab" aria-controls="nav-deleted" aria-selected="false">Deleted</button>
+    <button class="nav-link{% if data['active_tab'] == 'nav-processed' %} active{%endif%}" id="nav-processed-tab" data-bs-toggle="tab" data-bs-target="#nav-processed" type="button" role="tab" aria-controls="nav-processed" aria-selected="true">Processed</button>
+    <button class="nav-link{% if data['active_tab'] == 'nav-pending-uploads' %} active{%endif%}" id="nav-pending-uploads-tab" data-bs-toggle="tab" data-bs-target="#nav-pending-uploads" type="button" role="tab" aria-controls="nav-pending-uploads" aria-selected="false">Pending Uploads</button>
+    <button class="nav-link{% if data['active_tab'] == 'nav-pending-discoveries' %} active{%endif%}" id="nav-pending-discoveries-tab" data-bs-toggle="tab" data-bs-target="#nav-pending-discoveries" type="button" role="tab" aria-controls="nav-pending-discoveries" aria-selected="false">Pending Discoveries</button>
+    <button class="nav-link{% if data['active_tab'] == 'nav-deleted' %} active{%endif%}" id="nav-deleted-tab" data-bs-toggle="tab" data-bs-target="#nav-deleted" type="button" role="tab" aria-controls="nav-deleted" aria-selected="false">Deleted</button>
   </div>
 </nav>
 {# Download process and delete buttons should be disabled unless the table has a selection #}
 <div class="tab-content" id="nav-tabContent">
-  <div class="tab-pane fade show active" id="nav-processed" role="tabpanel" aria-labelledby="nav-processed-tab">
+  <div class="tab-pane fade{% if data['active_tab'] == 'nav-processed' %} show active{%endif%}" id="nav-processed" role="tabpanel" aria-labelledby="nav-processed-tab">
     <div class="d-block w-100 pt-2 pb-2" style="min-height: 50px;">
       <div class="d-block float-start">
        <button id="processedEditButton" class="btn btn-warning" type="button" data-bs-toggle="modal" data-bs-target="#fileProcessModal" onclick="processSelected('processedFileTable')" style="width: 150px;" disabled>
@@ -38,11 +38,11 @@ TODO: Add a paragraph or two of instructions on how this all works
         </button>
       </div>
     </div>
-    <div class="d-block w-100">
+    <div id='processedTableContainer' class="d-block w-100 position-relative">
       {{ components.table('processedFileTable', data['processed_files'], columns=['level', 'filename', 'owner', 'description', 'uploaded']) }}
     </div>
   </div>
-  <div class="tab-pane fade" id="nav-pending-uploads" role="tabpanel" aria-labelledby="nav-pending-uploads-tab">
+  <div class="tab-pane fade{% if data['active_tab'] == 'nav-pending-uploads' %} show active{%endif%}" id="nav-pending-uploads" role="tabpanel" aria-labelledby="nav-pending-uploads-tab">
     <div class="d-block w-100 pt-2 pb-2" style="min-height: 50px;">
       <div class="d-block float-start">
        <button id="pendingProcessButton" class="btn btn-success" type="button" data-bs-toggle="modal" data-bs-target="#fileProcessModal" onclick="processSelected('pendingFileTable')"  disabled>
@@ -57,11 +57,11 @@ TODO: Add a paragraph or two of instructions on how this all works
         </button>
       </div>
     </div>    
-    <div class="d-block w-100">
+    <div id='pendingTableContainer' class="d-block w-100 position-relative">
       {{ components.table('pendingFileTable', data['pending_files'], columns=['filename', 'uploaded', 'uploaded_by']) }}
     </div>
   </div>
-  <div class="tab-pane fade" id="nav-pending-discoveries" role="tabpanel" aria-labelledby="nav-pending-discoveries-tab">
+  <div class="tab-pane fade{% if data['active_tab'] == 'nav-pending-discoveries' %} show active{%endif%}" id="nav-pending-discoveries" role="tabpanel" aria-labelledby="nav-pending-discoveries-tab">
     <div class="d-block w-100 pt-2 pb-2" style="min-height: 50px;">
       <div class="d-block float-start">
        <button id="discoveredProcessButton" class="btn btn-success" type="button" data-bs-toggle="modal" data-bs-target="#fileProcessModal" onclick="processSelected('discoveredFileTable')"  disabled>
@@ -70,15 +70,17 @@ TODO: Add a paragraph or two of instructions on how this all works
        <button id="discoveredRefreshButton" class="btn btn-primary ms-5" type="button" onclick="refreshList('discoveredFileTable')"><b>Refresh List</b></button>
        <button id="discoveredDownloadButton" class="btn btn-secondary" type="button" onclick="downloadSelected('discoveredFileTable')"  disabled><b>Download Selected</b></button>
       </div>
+      {#
       <div class="d-block float-end">
        <button id="discoveredDeleteButton" class="btn btn-danger" type="button" onclick="deleteSelected('discoveredFileTable')"  disabled><b>Delete Selected</b></button>
       </div>
+      #}
     </div>
-    <div class="d-block w-100">
+    <div id='discoveredTableContainer' class="d-block w-100 position-relative">
       {{ components.table('discoveredFileTable', data['discovered_files'], columns=['filename', 'last_modified']) }}
     </div>
   </div>
-  <div class="tab-pane fade" id="nav-deleted" role="tabpanel" aria-labelledby="nav-deleted-tab">
+  <div class="tab-pane fade{% if data['active_tab'] == 'nav-deleted' %} show active{%endif%}" id="nav-deleted" role="tabpanel" aria-labelledby="nav-deleted-tab">
     <div class="d-block w-100 pt-2 pb-2" style="min-height: 50px;">
       <div class="d-block float-start">
        <button id="restoreDeletedButton" class="btn btn-success" type="button" data-bs-toggle="modal" data-bs-target="#fileRestoreModal" onclick="restoreSelected()" disabled>
@@ -90,7 +92,7 @@ TODO: Add a paragraph or two of instructions on how this all works
        <button id="deletedPurgeButton" class="btn btn-danger" type="button" onclick="deleteSelected('deletedFileTable')" disabled><b>Purge Selected</b></button>
       </div>#}
     </div>
-    <div class="d-block w-100">
+    <div id='deletedTableContainer' class="d-block w-100 position-relative">
       {{ components.table('deletedFileTable', data['deleted_files'], columns=['filename', 'description', 'uploaded', 'deleted']) }}
     </div>
   </div>
@@ -106,13 +108,46 @@ TODO: Add a paragraph or two of instructions on how this all works
 
 {% block scripts %}
 {{ scripts.set_form_options() }}
-{{ scripts.format_table('processedFileTable', dom="fliBpt", paging=True, pagelength=25, selectable=True, serverside=url_for('file.ajax', ftype='processed_files', uploads_id=data['uploads_id'])|safe) }}
+{{ scripts.format_table('processedFileTable', dom="fliBpt", paging=True, pagelength=25, lengthmenu=[[25, 50, 100, 1000, 5000], [25, 50, 100, 1000, 5000]], selectable=True, serverside=url_for('file.ajax', ftype='processed_files', uploads_id=data['uploads_id'])|safe) }}
 {{ scripts.format_table('pendingFileTable', dom="fliBpt", paging=True, lengthmenu=[[25, 50, 100, -1], [25, 50, 100, "All"]], pagelength=25, selectable=True, serverside=url_for('file.ajax', ftype='pending_files', uploads_id=data['uploads_id'])|safe) }}
-{{ scripts.format_table('discoveredFileTable', dom="fliBpt", paging=True, lengthmenu=[[25, 50, 100, -1], [25, 50, 100, "All"]], pagelength=25, selectable=True, serverside=url_for('file.ajax', ftype='discovered_files', uploads_id=data['uploads_id'])|safe) }}
-{{ scripts.format_table('deletedFileTable', dom="fliBpt", paging=True, lengthmenu=[[25, 50, 100, -1], [25, 50, 100, "All"]], pagelength=25, selectable=True, serverside=url_for('file.ajax', ftype='deleted_files', uploads_id=data['uploads_id'])|safe) }}
+{{ scripts.format_table('discoveredFileTable', dom="fliBpt", paging=True, lengthmenu=[[25, 50, 100, 1000, 5000], [25, 50, 100, 1000, 5000]], pagelength=25, selectable=True, serverside=url_for('file.ajax', ftype='discovered_files', uploads_id=data['uploads_id'])|safe) }}
+{{ scripts.format_table('deletedFileTable', dom="fliBpt", paging=True, lengthmenu=[[25, 50, 100, 1000, 5000], [25, 50, 100, 1000, 5000]], pagelength=25, selectable=True, serverside=url_for('file.ajax', ftype='deleted_files', uploads_id=data['uploads_id'])|safe) }}
 <script type="application/javascript">
 
-monitorSelections();
+function loadTables(){  
+  let tids = ['processedFileTable', 'pendingFileTable', 'discoveredFileTable', 'deletedFileTable'];
+  let ready_urls = [
+    "{{ url_for('file.ready', key='processed_files') }}", 
+    "{{ url_for('file.ready', key='pending_files') }}", 
+    "{{ url_for('file.ready', key='discovered_files') }}", 
+    "{{ url_for('file.ready', key='deleted_files') }}"
+  ];
+  {#let refresh_urls = [
+    "{{ url_for('file.refresh', vkey='vkey_' + data['uploads_id'] + '_processed_files') }}", 
+    "{{ url_for('file.refresh', vkey='vkey_' + data['uploads_id'] + '_pending_files') }}",
+    "{{ url_for('file.refresh', vkey='vkey_' + data['uploads_id'] + '_discovered_files') }}",
+    "{{ url_for('file.refresh', vkey='vkey_' + data['uploads_id'] + '_deleted_files') }}"
+  ];#}
+  let xhttps = [];
+  for (let i=0; i<tids.length; i++){
+    let xhttp_cur = new XMLHttpRequest();
+    xhttp_cur.onload = function () {
+      let res = JSON.parse(this.responseText);
+      if (res.ready == false) {
+        refreshList(tids[i]);
+      }
+    };
+    xhttp_cur.open('GET', ready_urls[i], false);
+    xhttp_cur.send();
+  }
+}
+
+function loadTables_auto(){
+  let tids = ['processedFileTable', 'pendingFileTable', 'discoveredFileTable', 'deletedFileTable'];
+  for (let i=0; i<tids.length; i++){
+    refreshList(tids[i]);
+  }
+}
 
 function disableButtons(buttons) {
   for (let i=0; i<buttons.length; i++){
@@ -217,7 +252,6 @@ function getSelections(tid) {
 }
 
 var refresh_loader = document.createElement('div');
-
 let spinner_container = document.createElement('div');
 spinner_container.classList.add('d-flex');
 spinner_container.classList.add('justify-content-center');
@@ -438,7 +472,7 @@ function refreshList(tid) {
   
   else if (tid == 'discoveredFileTable') {
     var bid = 'discoveredRefreshButton';
-    var button_ids = ['discoveredProcessButton', 'discoveredRefreshButton', 'discoveredDownloadButton', 'discoveredDeleteButton'];
+    var button_ids = ['discoveredProcessButton', 'discoveredRefreshButton', 'discoveredDownloadButton'];
     var refresh_url = "{{ url_for('file.refresh', vkey='vkey_' + data['uploads_id'] + '_discovered_files') }}";
   }
   else { // tid == 'deletedFileTable'
@@ -465,29 +499,30 @@ function refreshList(tid) {
   
   
   // refresh the table and enable the button when the data has been refreshed
-  setTimeout(function (){refresh_when_ready(tid);}, 1000);
+  //setTimeout(function (){refresh_when_ready(tid, 0);}, 1000);
+  setTimeout(function (){refresh_when_ready(tid);}, 500);
 }
 
+
 function refresh_when_ready(tid){
-  console.log('refresh_when_ready');
   if (tid == 'processedFileTable') {
     var bid = 'processedRefreshButton';
-    var ready_url = "{{ url_for('file.ready', vkey='vkey_' + data['uploads_id'] + '_processed_files') }}";
+    var ready_url = "{{ url_for('file.ready', key='vkey_' + data['uploads_id'] + '_processed_files') }}";
   } 
   
   else if (tid == 'pendingFileTable') {
     var bid = 'pendingRefreshButton';
-    var ready_url = "{{ url_for('file.ready', vkey='vkey_' + data['uploads_id'] + '_pending_files') }}";
+    var ready_url = "{{ url_for('file.ready', key='vkey_' + data['uploads_id'] + '_pending_files') }}";
   } 
   
   else if (tid == 'discoveredFileTable') {
     var bid = 'discoveredRefreshButton';
-    var ready_url = "{{ url_for('file.ready', vkey='vkey_' + data['uploads_id'] + '_discovered_files') }}";
+    var ready_url = "{{ url_for('file.ready', key='vkey_' + data['uploads_id'] + '_discovered_files') }}";
   }
   
   else { // tid == deletedFileTable
     var bid = 'deletedRefreshButton';
-    var ready_url = "{{ url_for('file.ready', vkey='vkey_' + data['uploads_id'] + '_deleted_files') }}";
+    var ready_url = "{{ url_for('file.ready', key='vkey_' + data['uploads_id'] + '_deleted_files') }}";
   } 
   
   let refresh_button = document.getElementById(bid);
@@ -508,12 +543,67 @@ function refresh_when_ready(tid){
       //tables[tid].ajax.reload();
     }
     else {
-        setTimeout(function (){refresh_when_ready(tid);}, 500);  // check again in 0.5 seconds
+      setTimeout(function (){refresh_when_ready(tid);}, 500);  // check again in 0.5 seconds
     }
   };
-  xhttp_ready.open('GET', ready_url, false);
+  xhttp_ready.open('GET', ready_url, true);
   xhttp_ready.send();
 }
+
+
+function refresh_when_ready_orig(tid, stage){
+  if (tid == 'processedFileTable') {
+    var bid = 'processedRefreshButton';
+    var ready_urls = ["{{ url_for('file.ready', key='processed_files') }}", "{{ url_for('file.ready', key='vkey_' + data['uploads_id'] + '_processed_files') }}"];
+  } 
+  
+  else if (tid == 'pendingFileTable') {
+    var bid = 'pendingRefreshButton';
+    var ready_urls = ["{{ url_for('file.ready', key='pending_files') }}", "{{ url_for('file.ready', key='vkey_' + data['uploads_id'] + '_pending_files') }}"];
+  } 
+  
+  else if (tid == 'discoveredFileTable') {
+    var bid = 'discoveredRefreshButton';
+    var ready_urls = ["{{ url_for('file.ready', key='discovered_files') }}", "{{ url_for('file.ready', key='vkey_' + data['uploads_id'] + '_discovered_files') }}"];
+  }
+  
+  else { // tid == deletedFileTable
+    var bid = 'deletedRefreshButton';
+    var ready_urls = ["{{ url_for('file.ready', key='deleted_files') }}", "{{ url_for('file.ready', key='vkey_' + data['uploads_id'] + '_deleted_files') }}"];
+  } 
+  
+  let refresh_button = document.getElementById(bid);
+  let xhttp_ready = new XMLHttpRequest();
+  xhttp_ready.onload = function () {
+    let res = JSON.parse(this.responseText);
+    console.log(stage)
+    // keep checking if the result is ready every 0.5 seconds it is
+    if (res.ready == true && stage == 1) {
+      // remove loading spinner and enable the refresh button
+      refresh_button.innerHTML = "<b>Refresh List</b>";
+      refresh_button.disabled = false;
+      // force the datatable to resubmit it's last request for table content
+      console.log(tid)
+      console.log(tables.get(tid));
+      tables.get(tid).ajax.reload();
+      
+      //tables.get(tid).trigger('deselect');
+      //tables[tid].ajax.reload();
+    }
+    else if (res.ready == true && stage == 0) {
+      setTimeout(function (){refresh_when_ready(tid, 1);}, 1000);
+    }
+    else {
+      setTimeout(function (){refresh_when_ready(tid, stage);}, 1000);  // check again in 0.5 seconds
+    }
+  };
+  xhttp_ready.open('GET', ready_urls[stage], false);
+  xhttp_ready.send();
+}
+
+monitorSelections();
+loadTables();
+//setTimeout(loadTables, 500);  //loadTables();
 
 /*
 DROPZONE OPTIONS (with default values)

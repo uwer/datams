@@ -1,5 +1,5 @@
 {% set title = (data['file']['filename'], '(' + data['file']['level'] + ')', None) %}
-{% set button = {'id': 'fileDeleteButton', 'class': 'btn btn-warning btn-md', 'label': 'EDIT FILE', 'target': url_for('file.edit', fid=data['file']['id']), 'modal_target': False} %}
+{#{% set button = {'id': 'fileDeleteButton', 'class': 'btn btn-warning btn-md', 'label': 'EDIT FILE', 'target': url_for('file.edit', fid=data['file']['id']), 'modal_target': False} %}#}
 {% set summary_keys=['description', 'uploaded', 'level', 'owner', 'comments'] %}
 
 {% extends "main.html" %}
@@ -10,14 +10,14 @@
 {% block content %}
     <div>
       {{ components.summary('fileSummary', data['file'], summary_keys) }}
-      <button type="button" class="btn btn-primary" onclick="window.location.href='{{url_for('file.download', fid=data['file']['id'], dl=True)}}'">Download</button>
+      <button type="button" class="btn btn-primary" onclick="window.location.href=' {{url_for('file.download')}}?index={{data['file']['id']}}&ftype=processed_files'">Download</button>
     </div>
     <div class="d-inline-block w-100">
       {#<iframe src="https://docs.google.com/gview?url={{url_for('file.download', fid=data['file']['id'], dl=False)}}&embedded=true"></iframe>#}
       {# <embed src="{{url_for('file.download', fid=data['file']['id'], dl=False)}}" {% if data['file']['filename'].endswith('.pdf') %}width="100%" height="800px"{% else %}width="100%" height="100px" {% endif %}/> #}
-      {% if not data['file']['filename'].endswith('.csv') %}
-      <embed src="{{url_for('file.download', fid=data['file']['id'], dl=False)}}" width="100%" height="750px"/>
-      {% endif %}
+      {#{% if not data['file']['filename'].endswith('.csv') %}#}
+      {#<embed src="{{url_for('file.download')}}?index={{data['file']['id']}}" width="100%" height="750px"/>#}
+      {#{% endif %}#}
     </div>
 {% endblock %}
 {% block scripts %}
