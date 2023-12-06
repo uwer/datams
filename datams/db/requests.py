@@ -185,33 +185,51 @@ def extract_equipment_fields(request, rtype):
 #     return values
 
 
-def extract_file_fields(request, rtype: str = 'default'):
-    form_fields = {
-        'ftype': ('ftype', str),
-        'indexes': ('indexes', eval),
-        'uploads_id': ('uploads_id', str),
-        'description': ('description', str),
-        'comments': ('comments', str),
-        'level': ('level', str),
-    }
-    # strict = False if rtype == 'edit' else True
-    strict = True
-    values = get_fields(request, strict, form_fields)
-    values['uploaded'] = current_timestamp()
-    values['organization_id'] = None
-    values['deployment_id'] = None
-    values['mooring_equipment_id'] = None
-    level = values.pop('level')
-    if level == 'organization':
-        values['organization_id'] = get_form_field(request, 'organization_id', int)
-    elif level == 'deployment':
-        values['deployment_id'] = get_form_field(request, 'deployment_id', int)
-    elif level == 'mooring_equipment':
-        mid = get_form_field(request, f"mooring_id", int)
-        eid = get_form_field(request, f"equipment_id", int)
-        values['mooring_equipment_id'] = select_mooring_equipment_id(mid, eid)
-    else:  # unowned
-        pass
+def extract_file_fields(request, rtype):
+    if rtype == 'process':
+        form_fields = {
+            'ftype': ('ftype', str),
+            'indexes': ('indexes', eval),
+            'uploads_id': ('uploads_id', str),
+            'description': ('description', str),
+            'comments': ('comments', str),
+            'level': ('level', str),
+        }
+        # strict = False if rtype == 'edit' else True
+        strict = True
+        values = get_fields(request, strict, form_fields)
+        values['uploaded'] = current_timestamp()
+        values['organization_id'] = None
+        values['deployment_id'] = None
+        values['mooring_equipment_id'] = None
+        level = values.pop('level')
+        if level == 'organization':
+            values['organization_id'] = get_form_field(request, 'organization_id', int)
+        elif level == 'deployment':
+            values['deployment_id'] = get_form_field(request, 'deployment_id', int)
+        elif level == 'mooring_equipment':
+            mid = get_form_field(request, f"mooring_id", int)
+            eid = get_form_field(request, f"equipment_id", int)
+            values['mooring_equipment_id'] = select_mooring_equipment_id(mid, eid)
+        else:  # unowned
+            pass
+    elif rtype == 'delete':
+        form_fields = {
+            'ftype': ('ftype', str),
+            'indexes': ('indexes', eval),
+            'uploads_id': ('uploads_id', str),
+        }
+        strict = True
+        values = get_fields(request, strict, form_fields)
+    elif rtype == 'restore':
+        form_fields = {
+            'indexes': ('indexes', eval),
+            'uploads_id': ('uploads_id', str),
+        }
+        strict = True
+        values = get_fields(request, strict, form_fields)
+    else:
+        values = None
     return values
 
 

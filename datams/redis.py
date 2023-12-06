@@ -73,16 +73,24 @@ def set_value(key, value) -> None:
 def get_value(key: str) -> Any:
     redis = get_redis()
     key_conversion_default = dict(
-        processed_files=(lambda x: pd.read_json(StringIO(x)),
-                         pd.DataFrame(columns=['id', 'level', 'owner', 'description',
-                                               'filename', 'uploaded', 'url'])),
-        pending_files=(lambda x: pd.read_json(StringIO(x)),
-                       pd.DataFrame(columns=['filename', 'uploaded', 'uploaded_by'])),
-        discovered_files=(lambda x: pd.read_json(StringIO(x)),
-                          pd.DataFrame(columns=['filename', 'last_modified'])),
-        deleted_files=(lambda x: pd.read_json(StringIO(x)),
-                       pd.DataFrame(columns=['filename', 'deleted', 'deleted_by',
-                                             'originally_uploaded_by'])),
+        processed_files=(
+            lambda x: pd.read_json(StringIO(x)),
+            pd.DataFrame(columns=['id', 'level', 'owner', 'description', 'filename',
+                                  'uploaded', 'url'])
+        ),
+        pending_files=(
+            lambda x: pd.read_json(StringIO(x)),
+            pd.DataFrame(columns=['id', 'filename', 'uploaded', 'uploaded_by'])
+        ),
+        discovered_files=(
+            lambda x: pd.read_json(StringIO(x)),
+            pd.DataFrame(columns=['id', 'filename', 'last_modified'])
+        ),
+        deleted_files=(
+            lambda x: pd.read_json(StringIO(x)),
+            pd.DataFrame(columns=['id', 'filename', 'description', 'uploaded',
+                                  'deleted', 'original_id', 'ftype'])
+        ),
         checkins=(eval, []),
     )
     is_vkey = False

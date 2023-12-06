@@ -5,8 +5,8 @@ from flask import (Blueprint, render_template, request, redirect, url_for, send_
 from flask_login import login_required, current_user
 from datams.celery import (update_task, compute_and_set_task, task_complete, update_vkey)
 from datams.redis import get_value
-from datams.db.views import (file_root, file_details, file_edit, file_download,
-                             file_delete)  # file_add, file_pending
+from datams.db.views import (file_root, file_details, file_edit)  # , file_download,
+                             # file_delete)  # file_add, file_pending
 from datams.db.requests import parse_request
 from datams.db.datatables import fetch
 from datams.utils import PENDING_DIRECTORY, PROCESSED_DIRECTORY
@@ -15,19 +15,20 @@ from datams.db.queries.insert import insert_files
 from datams.db.queries.update import update_files
 import logging
 
+from sqlalchemy import select, insert
+from sqlalchemy import delete as sdelete
+from datams.db.core import query_all, query_df
+from datams.db.tables import File, DeletedFile
+
 logging.basicConfig()
 log = logging.getLogger()
 log.setLevel(logging.DEBUG)
 
 DIRECTORY_LIMIT = 65000
+CHUNK_SIZE = 1000000  # ~1MB
 
 
 bp = Blueprint('file', __name__, url_prefix='/file')
-
-PROCESSED_FILES = None
-PENDING_FILES = None
-DISCOVERED_FILES = None
-DELETED_FILES = None
 
 
 def resolve_filename(filename, directory):
@@ -153,6 +154,73 @@ def cancel():
     return redirect(request.referrer)
 
 
+@bp.route('/delete', methods=('POST',))
+@login_required
+def delete():
+    values = parse_request(request, table='File', rtype='delete')
+    ftype, uploads_id = values.pop('ftype'), values.pop('uploads_id')
+    if ftype == 'processed_files':
+        indexes = values.pop('indexes')
+        # get all the indexes from the table
+        df = query_df(select(
+            File.id, File.organization_id, File.deployment_id,
+            File.mooring_equipment_id, File.path, File.name, File.description,
+            File.uploaded, File.comments
+        ).where(File.id.in_(indexes)))
+        df['ftype'] = 'processed_file'
+        df['deleted'] = int(round(dt.datetime.now().timestamp()))
+        df = df.rename(columns={'id': 'original_id'})
+        values = [v for v in df.transpose().to_dict().values()]
+        # insert these into deleted files and remove these from the File table
+        query_all([insert(DeletedFile).values(**v) for v in values] +
+                  [sdelete(File).where(File.id.in_(indexes))])
+
+    elif ftype == 'pending_files':
+        indexes = values.pop('indexes')
+        # get all the indexes from the table
+        df = get_value(f"vkey_{uploads_id}_pending_files").drop(columns=['uploaded_by'])
+        df = df.loc[df['id'].isin(indexes), :]
+        df['ftype'] = 'pending_file'
+        df['deleted'] = int(round(dt.datetime.now().timestamp()))
+        df['uploaded'] = df['uploaded'].apply(
+            lambda x: x if x is None
+            else int(round(dt.datetime.strptime(x, "%Y-%m-%d %H:%M:%S").timestamp()))
+        )
+        df = df.rename(columns={'id': 'original_id', 'filepath': 'path',
+                                'filename': 'name'})
+        values = [v for v in df.transpose().to_dict().values()]
+        # insert these into deleted files and remove these from the File table
+        query_all([insert(DeletedFile).values(**v) for v in values])
+
+    return redirect(request.referrer)
+
+
+@bp.route('/restore', methods=('POST',))
+@login_required
+def restore():
+    values = parse_request(request, table='File', rtype='restore')
+    uploads_id, indexes = values.pop('uploads_id'), values.pop('indexes')
+    # df = get_value(f"vkey_{uploads_id}_deleted_files")
+    stmt = select(DeletedFile.id, DeletedFile.original_id, DeletedFile.organization_id,
+                  DeletedFile.deployment_id, DeletedFile.mooring_equipment_id,
+                  DeletedFile.path, DeletedFile.name, DeletedFile.description,
+                  DeletedFile.uploaded, DeletedFile.comments, DeletedFile.ftype)
+    df = query_df(stmt)
+    df = (
+        df.loc[df['id'].isin(indexes), :]
+          .drop(columns=['id'])
+          .rename(columns={'original_id': 'id'})
+    )
+    df = df.loc[df['ftype'] == 'processed_file', :].drop(columns=['ftype'])
+    values = [v for v in df.transpose().to_dict().values()]
+    # insert these into files and remove these from the DeletedFile table
+    # FIXME: When trying to restore this will cause problems if the foreign keys no
+    #        longer exist
+    query_all([insert(File).values(**v) for v in values] +
+              [sdelete(DeletedFile).where(DeletedFile.id.in_(indexes))])
+    return redirect(request.referrer)
+
+
 # TODO: Figure out why there seems to be a delay in updating these within the view
 # TODO: Put this code into view.py or somewhere more appropriate.
 @bp.route('/process', methods=('POST',))
@@ -235,28 +303,60 @@ def process():
     return redirect(request.referrer)
 
 
-@bp.route("/download/<fid>&<dl>", methods=('GET',))
+@bp.route("/download", methods=('GET',))
 @login_required
-def download(fid, dl):
-    dl = True if dl == 'True' else False
-    data = file_download(fid)
-    if not data:
-        return redirect(request.referrer)
-    try:
-        path, filename = tuple(data['file'])
-        return send_file(os.path.realpath(path), as_attachment=dl,
-                         download_name=filename)
-    except Exception as e:
-        return str(path)
+def download():
+    request_values = request.values
+
+    uploads_id = request_values['uploads_id']
+    ftype = request_values['ftype']
+    index = int(request_values['index'])
+
+    df = get_value(f"vkey_{uploads_id}_{ftype}")
+    filepath, filename = tuple(
+        df.loc[df['id'] == index, ['filepath', 'filename']].iloc[0]
+    )
+    filename = secure_filename(filename)
+    return send_file(os.path.realpath(filepath), as_attachment=True,
+                     download_name=filename)
 
 
-@bp.route('/details/<fid>', methods=('GET',))
+@bp.route('/details', methods=('GET',))
 @login_required
-def details(fid: int):
-    data = file_details(fid)
+def details():
+    request_values = request.values
+    index = int(request_values['index'])
+    data = file_details(index)
     if not data:
         return redirect(request.referrer)
     return render_template('file/details.html', data=data)
+
+# @bp.route("/download", methods=('GET',))
+# @login_required
+# def download():
+#     request_values = request.values
+#
+#     uploads_id = request_values['uploads_id']
+#     ftype = request_values['ftype']
+#     index = int(request_values['index'])
+#
+#     df = get_value(f"vkey_{uploads_id}_{ftype}")
+#     filepath, filename = tuple(
+#         df.loc[df['id'] == index, ['filepath', 'filename']].iloc[0]
+#     )
+#     filename = secure_filename(filename)
+#     s = send_file(os.path.realpath(filepath), as_attachment=True,
+#                   download_name=filename)
+#     header = {k: v for k, v in s.headers.items()}
+#     def generate():
+#         with open(os.path.realpath(filepath), 'rb') as f:
+#             f.seek(0, os.SEEK_END)
+#             size = f.tell()
+#             for offset in range(0, size, CHUNK_SIZE):
+#                 chunk = min(CHUNK_SIZE, size-offset)
+#                 f.seek(offset)
+#                 yield f.read(chunk)
+#     return generate(), header
 
 
 @bp.route('/', methods=('GET',))
@@ -296,13 +396,6 @@ def ajax():
 # -------------------------------------------------------------------------------------
 # -------------------------------------------------------------------------------------
 # TODO: Consider removing the following
-
-@bp.route('/delete/<fid>', methods=('POST',))
-@login_required
-def delete(fid: int):
-    file_delete(fid)
-    return redirect(request.referrer)
-
 
 @bp.route('/edit/<fid>', methods=('GET', 'POST'))
 @login_required
@@ -512,3 +605,32 @@ def edit(fid: int):
 #
 #     # TODO: Implement this will take the information it needs from the form
 #     return redirect(request.referrer)
+
+# @bp.route('/delete/<fid>', methods=('POST',))
+# @login_required
+# def delete_orig(fid: int):
+#     file_delete(fid)
+#     return redirect(request.referrer)
+
+
+# @bp.route("/download/<fid>&<dl>", methods=('GET',))
+# @login_required
+# def download_orig(fid, dl):
+#     dl = True if dl == 'True' else False
+#     data = file_download(fid)
+#     if not data:
+#         return redirect(request.referrer)
+#     try:
+#         path, filename = tuple(data['file'])
+#         return send_file(os.path.realpath(path), as_attachment=dl,
+#                          download_name=filename)
+#     except Exception as e:
+#         return str(path)
+
+# @bp.route('/details/<fid>', methods=('GET',))
+# @login_required
+# def details(fid: int):
+#     data = file_details(fid)
+#     if not data:
+#         return redirect(request.referrer)
+#     return render_template('file/details.html', data=data)

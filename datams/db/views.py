@@ -221,15 +221,15 @@ def file_edit(fid, request: flask.Request):
         # load_processed_files()
 
 
-def file_delete(fid):
-    delete_query(table='File', file_id=fid)
+# def file_delete(fid):
+#     delete_query(table='File', file_id=fid)
     # load_processed_files()
 
 
-def file_download(fid):
-    kwargs = dict(view='file.download', file_id=fid)
-    data_to_fetch = ['file']
-    return fetch_data(data_to_fetch, **kwargs)
+# def file_download(fid):
+#     kwargs = dict(view='file.download', file_id=fid)
+#     data_to_fetch = ['file']
+#     return fetch_data(data_to_fetch, **kwargs)
 
 
 def equipment_root():

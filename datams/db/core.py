@@ -32,7 +32,11 @@ def query_df(statement):
     """
     return query results as a dataframe empty dataframe if None
     """
-    return result_to_df(query(statement))
+    engine = get_engine()
+    with Session(engine) as session:
+        result = session.execute(statement)
+        df = pd.DataFrame(result, columns=result.keys())
+    return df
 
 
 def query_all(statements: list) -> None:

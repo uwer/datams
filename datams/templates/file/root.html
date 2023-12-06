@@ -30,10 +30,12 @@ TODO: Add a paragraph or two of instructions on how this all works
        </button>
        <button id="processedRefreshButton" class="btn btn-primary ms-5" type="button" onclick="refreshList('processedFileTable')"><b>Refresh List</b></button>
        <button id="processedDownloadButton" class="btn btn-secondary" type="button" onclick="downloadSelected('processedFileTable')" disabled><b>Download Selected</b></button>
-       <button id="processedDetailsButton" class="btn btn-secondary" type="button" onclick="viewDetails('processedFileTable')" disabled><b>View Details</b></button>
+       <button id="processedDetailsButton" class="btn btn-secondary" type="button" onclick="viewDetails()" disabled><b>View Details</b></button>
       </div>
       <div class="d-block float-end">
-       <button id="processedDeleteButton" class="btn btn-danger" type="button" onclick="deleteSelected('processedFileTable')" disabled><b>Delete Selected</b></button>
+        <button id="processedDeleteButton" class="btn btn-danger" type="button" data-bs-toggle="modal" data-bs-target="#fileDeleteModal" onclick="deleteSelected('processedFileTable')" disabled>
+          <b>Delete Selected</b>
+        </button>
       </div>
     </div>
     <div class="d-block w-100">
@@ -47,10 +49,12 @@ TODO: Add a paragraph or two of instructions on how this all works
         <b>Process Selected</b>
        </button>
        <button id="pendingRefreshButton" class="btn btn-primary ms-5" type="button" onclick="refreshList('pendingFileTable')"><b>Refresh List</b></button>
-       <button id="pendingDownloadButton" class="btn btn-secondary" type="button" onclick="downloadSelected('pendingFileTable')"  disabled><b>Download Selected</b></button>
+       <button id="pendingDownloadButton" class="btn btn-secondary" type="button" onclick="downloadSelected('pendingFileTable')" disabled><b>Download Selected</b></button>
       </div>
       <div class="d-block float-end">
-       <button id="pendingDeleteButton" class="btn btn-danger" type="button" onclick="deleteSelected('pendingFileTable')" disabled><b>Delete Selected</b></button>
+       <button id="pendingDeleteButton" class="btn btn-danger" type="button" data-bs-toggle="modal" data-bs-target="#fileDeleteModal" onclick="deleteSelected('pendingFileTable')" disabled>
+          <b>Delete Selected</b>
+        </button>
       </div>
     </div>    
     <div class="d-block w-100">
@@ -77,7 +81,9 @@ TODO: Add a paragraph or two of instructions on how this all works
   <div class="tab-pane fade" id="nav-deleted" role="tabpanel" aria-labelledby="nav-deleted-tab">
     <div class="d-block w-100 pt-2 pb-2" style="min-height: 50px;">
       <div class="d-block float-start">
-       <button id="deletedRestoreButton" class="btn btn-success" type="button" onclick="restoreSelected('deletedFileTable')" disabled><b>Restore Selected</b></button>
+       <button id="restoreDeletedButton" class="btn btn-success" type="button" data-bs-toggle="modal" data-bs-target="#fileRestoreModal" onclick="restoreSelected()" disabled>
+          <b>Restore Selected</b>
+       </button>
        <button id="deletedRefreshButton" class="btn btn-primary ms-5" type="button" onclick="refreshList('deletedFileTable')"><b>Refresh List</b></button>
       </div>
       {#<div class="d-block float-end">
@@ -85,15 +91,17 @@ TODO: Add a paragraph or two of instructions on how this all works
       </div>#}
     </div>
     <div class="d-block w-100">
-      {{ components.table('deletedFileTable', data['deleted_files'], columns=['filename', 'deleted', 'deleted_by', 'originally_uploaded_by']) }}
+      {{ components.table('deletedFileTable', data['deleted_files'], columns=['filename', 'description', 'uploaded', 'deleted']) }}
     </div>
   </div>
 </div>
 {% endblock %}
 
 {% block modal %}
-    {{ components.modal('fileAddModal', 'Add Files', file.add(), size='xl') }}
-    {{ components.modal('fileProcessModal', 'Process Files', file.process(), size='xl') }}
+    {{ components.modal('fileAddModal', 'Add File(s)', file.add(), size='xl') }}
+    {{ components.modal('fileProcessModal', 'Process File(s)', file.process(), size='xl') }}
+    {{ components.modal('fileDeleteModal', 'Delete File(s)', file.delete()) }}
+    {{ components.modal('fileRestoreModal', 'Restore File(s)', file.restore()) }}
 {% endblock %}
 
 {% block scripts %}
@@ -138,7 +146,7 @@ function selectionChanged(e, dt, type, indexes) {
   } 
   
   else { // == 'deletedFileTable'
-    document.getElementById('deletedRestoreButton').disabled = (num_selections == 0);
+    document.getElementById('restoreDeletedButton').disabled = (num_selections == 0);
     //document.getElementById('deletedPurgeButton').disabled = (num_selections == 0);
   } 
   
@@ -223,12 +231,51 @@ spinner_container.appendChild(spinner);
 
 
 function deleteSelected(tid) {
-  //TODO: Finish method
-  let selections = getSelections(tid);
+  // set the selection indexes into the form and tell the system which files you are working with.  
+  if (tid == 'processedFileTable'){
+    document.getElementById('delete_ftype').value = 'processed_files';
+  }
+  else if (tid == 'pendingFileTable'){
+    document.getElementById('delete_ftype').value = 'pending_files';
+  }
+  else if (tid == 'discoveredFileTable'){
+    document.getElementById('delete_ftype').value = 'discovered_files';
+  }
+  else {
+    document.getElementById('delete_ftype').value = '';
+  }
+  let indexes = "[";
+  let table = tables.get(tid);
+  table.rows({ selected: true, filter: 'none'}).every( function (rowIdx, tableLoop, rowLoop) {
+    indexes = indexes.concat(table.row(rowIdx).data()[100] + ", ");
+  });
+  if (indexes.length > 1) {
+    indexes = indexes.slice(0, -2)
+  }
+  indexes = indexes.concat(']');
+  document.getElementById('delete_indexes').value = indexes;
+  console.log(indexes);
 }
+
+
+function restoreSelected() {
+  let indexes = "[";
+  let table = tables.get('deletedFileTable');
+  table.rows({ selected: true, filter: 'none'}).every( function (rowIdx, tableLoop, rowLoop) {
+    indexes = indexes.concat(table.row(rowIdx).data()[100] + ", ");
+  });
+  if (indexes.length > 1) {
+    indexes = indexes.slice(0, -2)
+  }
+  indexes = indexes.concat(']');
+  document.getElementById('restore_indexes').value = indexes;
+  console.log(indexes);
+}
+
+
+
 function processSelected(tid) {
-  // TODO: Lock in the current values of all the file dataframes
-  // TODO: reset the form values and set the hidden values to the indexes of the selections and the table that was used
+  // Reset the form values and set the hidden values to the indexes of the selections and the table that was used
   document.getElementById('level_default_option').selected = true;
   document.getElementById('description_default_option').selected = true;
   document.getElementById('organization_default_option').selected = true;
@@ -289,14 +336,94 @@ function processSelected(tid) {
 }
 
 
+// Function to download data to a file
+function download(data, filename, type) {
+  var file = new Blob([data], {type: type});
+  //console.log(typeof data);
+  if (window.navigator.msSaveOrOpenBlob) // IE10+
+    window.navigator.msSaveOrOpenBlob(file, filename);
+  else { // Others
+    var a = document.createElement("a"), url = URL.createObjectURL(file);
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function() {
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);  
+    }, 0); 
+  }
+}
 
 function downloadSelected(tid) {
-  //TODO: Finish method
-  let selections = getSelections(tid);
+  // set the selection indexes into the form and tell the system which files you are working with.    
+  if (tid == 'processedFileTable'){
+    var bid = 'processedDownloadButton';
+    var ftype = 'processed_files';
+  }
   
+  else if (tid == 'pendingFileTable'){
+    var bid = 'pendingDownloadButton';
+    var ftype = 'pending_files';
+  }
+  
+  else if (tid == 'discoveredFileTable'){
+    var bid = 'discoveredDownloadButton';
+    var ftype = 'discovered_files';
+  }
+  else {
+    var ftype = '';
+  }
+  var download_button = document.getElementById(bid);
+  download_button.disabled = true;
+  download_button.style.minWidth = download_button.offsetWidth.toString() + 'px';
+  download_button.innerHTML = refresh_loader.innerHTML;
+  
+  let table = tables.get(tid);
+  var num_total = table.rows({ selected: true, filter: 'none'}).length
+  var num_finished = 0;
+  table.rows({ selected: true, filter: 'none'}).every( function (rowIdx, tableLoop, rowLoop) {
+    let url = "{{ url_for('file.download') }}?ftype=" + ftype + "&index=" + table.row(rowIdx).data()[100] + "&uploads_id={{ data['uploads_id'] }}";
+    let xhttp = new XMLHttpRequest();
+    xhttp.open('GET', url, true);
+    xhttp.responseType = "arraybuffer";
+    xhttp.onload = function () {
+      num_finished++;
+      if (num_finished == num_total) {
+        download_button.innerHTML = "<b>Refresh List</b>";
+        download_button.disabled = false;
+      }
+      if (this.status == 200) {
+        console.log(this.getAllResponseHeaders());
+        let filename = this.getResponseHeader('content-disposition').match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/)[1];
+        let type = this.getResponseHeader('content-type');
+        let data = this.response;
+        download(data, filename, type);
+      }
+    }
+    // TODO: Figure out a way to update the user on the download progress
+    
+    //xhttp.onprogress = function () {
+    //  console.log(this.getAllResponseHeaders());
+    //  console.log(this.response);
+    //}
+    xhttp.send();
+  });
 }
+
+function viewDetails() {
+  let table = tables.get('processedFileTable');
+  let url = ""
+  table.rows({ selected: true, filter: 'none'}).every( function (rowIdx, tableLoop, rowLoop) {
+    url = "{{ url_for('file.details') }}?index=" + table.row(rowIdx).data()[100];
+  });
+  if (url != "") {
+    window.location.href = url;
+  }
+}
+
 function refreshList(tid) {
-  console.log(tid);
+  //console.log(tid);
   if (tid == 'processedFileTable') {
     var bid = 'processedRefreshButton';
     var button_ids = ['processedEditButton', 'processedRefreshButton', 'processedDownloadButton', 'processedDetailsButton', 'processedDeleteButton'];
@@ -316,11 +443,11 @@ function refreshList(tid) {
   }
   else { // tid == 'deletedFileTable'
     var bid = 'deletedRefreshButton';
-    var button_ids = ['deletedRestoreButton', 'deletedRefreshButton'];
+    var button_ids = ['restoreDeletedButton', 'deletedRefreshButton'];
     var refresh_url = "{{ url_for('file.refresh', vkey='vkey_' + data['uploads_id'] + '_deleted_files') }}";
   }
-  console.log(bid);
-  console.log(refresh_url);
+  //console.log(bid);
+  //console.log(refresh_url);
   
   // disable all relevant buttons
   disableButtons(button_ids);

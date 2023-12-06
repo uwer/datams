@@ -64,6 +64,27 @@ def contact_format(df, compute):
     return df
 
 
+def deleted_file_format(df, compute=None):
+    df, compute = setup_compute(df, compute)
+    if df.empty:
+        return df
+    if 'uploaded' in df.columns:
+        df['uploaded'] = df['uploaded'].apply(lambda x: x if pd.isna(x) else
+                                              dt.datetime.fromtimestamp(x)
+                                              .strftime("%Y-%m-%d %H:%M:%S"))
+    if 'deleted' in df.columns:
+        df['deleted'] = df['deleted'].apply(lambda x: x if pd.isna(x) else
+                                              dt.datetime.fromtimestamp(x)
+                                              .strftime("%Y-%m-%d %H:%M:%S"))
+    if meets_requirements(compute, 'filename', ['path', 'name'], df.columns):
+        df['filename'] = df.apply(
+            lambda x: os.path.basename(x['path']) if pd.isna(x['name']) else x['name'],
+            axis=1
+        )
+    remaing_compute_check(compute)
+    return df
+
+
 def deployment_format(df, compute=None):
     df, compute = setup_compute(df, compute)
     if df.empty:
@@ -322,4 +343,3 @@ def organization_format(df, compute=None):
 
     remaing_compute_check(compute)
     return df
-

@@ -32,10 +32,12 @@ log.setLevel(logging.DEBUG)
 
 # TODO: Wrap the common bits into functions for reuse
 def fetch(request: flask.Request):
+    # Note values 100 and up are provided, but not displayed and can be accessed by the
+    # template.  They are also not used when filtered or ordered.
     column_maps = dict(
         processed_files={
             0: 'level', 1: 'filename', 2: 'owner', 3: 'description', 4: 'uploaded',
-            5: 'url', 100: 'id'  # 101: 'name',  100: 'filepath'
+            100: 'id', 101: 'url'  # 101: 'name',  100: 'filepath'
         },
         pending_files={
             0: 'filename', 1: 'uploaded', 2: 'uploaded_by', 100: 'id'
@@ -44,9 +46,10 @@ def fetch(request: flask.Request):
         discovered_files={
             0: 'filename', 1: 'last_modified', 100: 'id'  # 101: 'name', 100: 'filepath'
         },
+        # TODO: Consider adding 'deleted_by' and 'uploaded_by' to columns
         deleted_files={
-            0: 'filename', 1: 'deleted', 2: 'deleted_by', 3: 'originally_uploaded_by',
-            100: 'id'  # 101: 'name', 100: 'filepath'
+            0: 'filename', 1: 'description', 2: 'uploaded', 3: 'deleted',
+            100: 'id', 101: 'original_id', 102: 'ftype'
         },
     )
     request_values = request.values
@@ -88,8 +91,7 @@ def fetch(request: flask.Request):
         re = '^' + ''.join([f"(?=.*{w})" for w in search_value.split(' ') if w != ''])
         searchable = df.assign(
             a=eval(" + ' ' + ".join(
-                [f"df['{i}'].astype(str)" for i in cmap.values()
-                 if i != 'url' and i != 'filepath' and i != 'name'])
+                [f"df['{v}'].astype(str)" for k, v in cmap.items() if k < 100])
             )
         )['a']
         df_filtered = df.loc[searchable.str.contains(re, case=False), :]
@@ -106,6 +108,7 @@ def fetch(request: flask.Request):
     if not df.empty:
         df_filtered = df_filtered.sort_values(by=by, ascending=ascending,
                                               key=lambda x: x.str.lower())
+    df_filtered = df_filtered.fillna('')
 
     end = start + length if length != -1 else df.shape[0]
     data = list(

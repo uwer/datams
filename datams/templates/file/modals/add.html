@@ -1,10 +1,10 @@
 <div class='d-block'>
   <form id="submitForm" method="POST" action="{{ url_for('file.submit') }}">
     <div id="fileDropzone" class="dropzone" required></div>
-    <input type="hidden" id="uploads_id" name="uploads_id" value="{{ data['uploads_id'] }}">
+    <input type="hidden" id="add_uploads_id" name="uploads_id" value="{{ data['uploads_id'] }}">
   </form>
   <form id="cancelForm" method="POST" action="{{ url_for('file.cancel') }}">
-    <input type="hidden" id="uploads_id" name="uploads_id" value="{{ data['uploads_id'] }}">
+    <input type="hidden" id="cancel_uploads_id" name="uploads_id" value="{{ data['uploads_id'] }}">
   </form>
 </div>
 <div class="d-block pt-2">

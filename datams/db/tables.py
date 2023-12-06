@@ -87,22 +87,17 @@ class DeletedFile(Base):
     __tablename__ = 'DeletedFile'
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    original_id = Mapped[int]
-    source = Mapped[int]
-    organization_id: Mapped[int] = mapped_column(
-        ForeignKey('Organization.id', ondelete='SET NULL'), nullable=True
-    )
-    deployment_id: Mapped[int] = mapped_column(
-        ForeignKey('Deployment.id', ondelete='SET NULL'), nullable=True
-    )
-    mooring_equipment_id: Mapped[int] = mapped_column(
-        ForeignKey('MooringEquipment.id', ondelete='SET NULL'), nullable=True
-    )
+    original_id: Mapped[int]
+    ftype: Mapped[str]
+    organization_id: Mapped[Optional[int]]
+    deployment_id: Mapped[Optional[int]]
+    mooring_equipment_id: Mapped[Optional[int]]
 
     path: Mapped[str]
     name: Mapped[Optional[str]]
-    description: Mapped[str]
+    description: Mapped[Optional[str]]
     uploaded: Mapped[int]
+    deleted: Mapped[int]
     comments: Mapped[Optional[str]]
 
 
