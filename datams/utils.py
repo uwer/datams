@@ -48,13 +48,12 @@ APP_CONFIG = config['app']
 MAP_CONFIG = config['map']
 MENU_CONFIG = config['menu']
 
-upload_dir = APP_CONFIG['DATA_FILES']['upload_directory']
+UPLOADS_DIRECTORY = APP_CONFIG['DATA_FILES']['upload_directory']
 ALLOWED_UPLOAD_EXTENSIONS = APP_CONFIG['DATA_FILES']['allowed_extensions']
 
 DISCOVERY_DIRECTORY = os.path.realpath(APP_CONFIG['DATA_FILES']['discovery_directory'])
-PENDING_DIRECTORY = os.path.realpath(f"{upload_dir}/pending/")
-PROCESSED_DIRECTORY = os.path.realpath(f"{upload_dir}/processed/")
-DELETED_DIRECTORY = os.path.realpath(f"{upload_dir}/deleted/")
+PENDING_DIRECTORY = os.path.realpath(f"{UPLOADS_DIRECTORY}/pending/")
+PROCESSED_DIRECTORY = os.path.realpath(f"{UPLOADS_DIRECTORY}/processed/")
 REMOVE_STALES_EVERY = APP_CONFIG['DATA_FILES']['remove_stales_every']  # in seconds
 
 utc_offsets = sorted(

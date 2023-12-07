@@ -108,10 +108,10 @@ TODO: Add a paragraph or two of instructions on how this all works
 
 {% block scripts %}
 {{ scripts.set_form_options() }}
-{{ scripts.format_table('processedFileTable', dom="fliBpt", paging=True, pagelength=25, lengthmenu=[[25, 50, 100, 1000, 5000], [25, 50, 100, 1000, 5000]], selectable=True, serverside=url_for('file.ajax', ftype='processed_files', uploads_id=data['uploads_id'])|safe) }}
+{{ scripts.format_table('processedFileTable', dom="fliBpt", paging=True, pagelength=25, lengthmenu=[25, 50, 100, 1000, 5000], selectable=True, serverside=url_for('file.ajax', ftype='processed_files', uploads_id=data['uploads_id'])|safe) }}
 {{ scripts.format_table('pendingFileTable', dom="fliBpt", paging=True, lengthmenu=[[25, 50, 100, -1], [25, 50, 100, "All"]], pagelength=25, selectable=True, serverside=url_for('file.ajax', ftype='pending_files', uploads_id=data['uploads_id'])|safe) }}
-{{ scripts.format_table('discoveredFileTable', dom="fliBpt", paging=True, lengthmenu=[[25, 50, 100, 1000, 5000], [25, 50, 100, 1000, 5000]], pagelength=25, selectable=True, serverside=url_for('file.ajax', ftype='discovered_files', uploads_id=data['uploads_id'])|safe) }}
-{{ scripts.format_table('deletedFileTable', dom="fliBpt", paging=True, lengthmenu=[[25, 50, 100, 1000, 5000], [25, 50, 100, 1000, 5000]], pagelength=25, selectable=True, serverside=url_for('file.ajax', ftype='deleted_files', uploads_id=data['uploads_id'])|safe) }}
+{{ scripts.format_table('discoveredFileTable', dom="fliBpt", paging=True, lengthmenu=[25, 50, 100, 1000, 5000], pagelength=25, selectable=True, serverside=url_for('file.ajax', ftype='discovered_files', uploads_id=data['uploads_id'])|safe) }}
+{{ scripts.format_table('deletedFileTable', dom="fliBpt", paging=True, lengthmenu=[25, 50, 100, 1000, 5000], pagelength=25, selectable=True, serverside=url_for('file.ajax', ftype='deleted_files', uploads_id=data['uploads_id'])|safe) }}
 <script type="application/javascript">
 
 function loadTables(){  

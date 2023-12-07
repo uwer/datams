@@ -40,7 +40,7 @@ def flask_init_app(name, test_config=None):
     @app.route('/', methods=('GET',))
     def root():
         """Navigating to home will always redirect to the login page.  """
-        return redirect(url_for('user.login'))
+        return redirect(url_for('organization.root'))
 
     # 6) add all the other routes
     from datams.views import (

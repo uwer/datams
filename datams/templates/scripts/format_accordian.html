@@ -8,5 +8,5 @@ Parameters
 {% from "/scripts/__init__.html" import format_table with context %}
 
 {% for i in df['section'].unique() %}
-  {{ format_table('mfilesAccordian' + 'Table' + loop.index0|string, dom="flipt", header=False, paging=True) }}
+  {{ format_table('mfilesAccordian' + 'Table' + loop.index0|string, dom="flipt", header=False, paging=True, pagelength=25, lengthmenu=[25, 50, 100, 1000, 5000]) }}
 {% endfor %}

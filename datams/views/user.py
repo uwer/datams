@@ -45,4 +45,4 @@ def login():
 def logout():
     logout_user()
     flash('Logged out successfully.')
-    return redirect('/')
+    return redirect(url_for('user.login'))

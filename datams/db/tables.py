@@ -235,6 +235,11 @@ class User(Base, UserMixin):
     reset_key: Mapped[Optional[str]]
 
 
+def wipe_db(app_config):
+    engine = connect_and_return_engine(app_config)
+    Base.metadata.drop_all(engine)
+
+
 def initialize_db(app_config):
     engine = connect_and_return_engine(app_config)
     Base.metadata.drop_all(engine)
