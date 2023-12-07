@@ -276,8 +276,12 @@ def select_organizations(view=None, **kwargs):
         # 'view': (columns, where)
         'None':
             (['id', 'name'], None),
+        'contact.details':
+            (['name', 'url'], Contact.id == kwargs.get('contact_id')),
         'deployment.details':
             (['name', 'url'], Deployment.id == kwargs.get('deployment_id')),
+        'equipment.details':
+            (['name', 'url'], Equipment.id == kwargs.get('equipment_id')),
         'deployment.edit':
             (['id'], Deployment.id == kwargs.get('deployment_id')),
         'mooring.details':
@@ -296,6 +300,8 @@ def select_organizations(view=None, **kwargs):
                Organization.country_id, Organization.comments,
                Country.name.label('country'))
         .join(Country)
+        .outerjoin_from(Organization, Equipment)
+        .outerjoin_from(Organization, Contact)
         .outerjoin_from(Organization, DeploymentOrganization)
         .outerjoin_from(DeploymentOrganization, Deployment)
         .outerjoin_from(Deployment, Mooring)
@@ -326,14 +332,14 @@ def select_deployments(view=None, **kwargs):
               'organizations', 'country_id', 'oids'],
              Deployment.id == kwargs.get('deployment_id')),
         'equipment.details':
-            (['name', 'organizations', 'url'],
+            (['name', 'url'],
              Equipment.id == kwargs.get('equipment_id')),
         'equipment.edit':
             (['id'], Equipment.id == kwargs.get('equipment_id')),
         'mooring.details':
             (['name', 'url'], Mooring.id == kwargs.get('mooring_id')),
         'organization.details':
-            (['location', 'date', 'organizations', 'url'],
+            (['location', 'date', 'url'],
              Organization.id == kwargs.get('organization_id')),
         'organization.edit':
             (['id'], Organization.id == kwargs.get('organization_id')),
@@ -429,7 +435,7 @@ def select_equipment(view=None, **kwargs):
             (['id', 'item', 'serial_number', 'mids'], None),
         'deployment.details':
             (['id', 'serial_number', 'item', 'make', 'model', 'comments', 'url',
-              'html'], Deployment.id == kwargs.get('deployment_id')),
+              'html', 'name'], Deployment.id == kwargs.get('deployment_id')),
         'equipment.root':
             (['item', 'make_&_model', 'serial_number', 'status', 'url'], None),
         'equipment.details':
@@ -501,10 +507,10 @@ def select_ofiles(view=None, **kwargs):
         # 'view': (columns, where)
         'None':
             (['id', 'level', 'owner', 'description', 'filename', 'uploaded', 'comments',
-              'path', 'url', 'organization_id', 'deployment_id', 'mooring_id', 'name',
+              'path', 'url', 'organization_id', 'deployment_id', 'mooring_id',
               'equipment_id', 'mooring_equipment_id'], fid),
         'organization.details':
-            (['description', 'filename', 'uploaded', 'url', 'name'],
+            (['filename', 'uploaded', 'url'],
              Organization.id == kwargs.get('organization_id')),
         'organization.edit':
             (['id'], Organization.id == kwargs.get('organization_id')),
@@ -534,7 +540,7 @@ def select_dfiles(view=None, **kwargs):
               'path', 'url', 'organization_id', 'deployment_id', 'mooring_id', 'name',
               'equipment_id', 'mooring_equipment_id'], fid),
         'deployment.details':
-            (['description', 'filename', 'name', 'uploaded', 'url'],
+            (['filename', 'uploaded', 'url'],
              Deployment.id == kwargs.get('deployment_id')),
     }
     stmt = (
@@ -571,10 +577,10 @@ def select_mfiles(view=None, **kwargs):
               'path', 'url', 'organization_id', 'deployment_id', 'mooring_id', 'name',
               'equipment_id', 'mooring_equipment_id'], fid),
         'deployment.details':
-            (['description', 'filename', 'uploaded', 'url', 'mooring_id', 'name'],
+            (['description', 'filename', 'uploaded', 'url', 'mooring_id'],
              Deployment.id == kwargs.get('deployment_id')),
         'mooring.details':
-            (['description', 'filename', 'uploaded', 'url', 'name'],
+            (['filename', 'description', 'uploaded', 'url'],
              Mooring.id == kwargs.get('mooring_id')),
     }
     stmt = (

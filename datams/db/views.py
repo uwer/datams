@@ -92,7 +92,7 @@ def contact_root():
 
 def contact_details(cid):
     kwargs = dict(view='contact.details', contact_id=cid)
-    data_to_fetch = ['contact', 'deployments']
+    data_to_fetch = ['contact', 'deployments', 'organization']
     return fetch_data(data_to_fetch, **kwargs)
 
 
@@ -240,7 +240,7 @@ def equipment_root():
 
 def equipment_details(eid):
     kwargs = dict(view='equipment.details', equipment_id=eid)
-    data_to_fetch = ['equipment', 'deployments']
+    data_to_fetch = ['equipment', 'deployments', 'organization']
     return fetch_data(data_to_fetch, **kwargs)
 
 
@@ -252,8 +252,8 @@ def equipment_add(request: flask.Request):
 def equipment_edit(eid, request: flask.Request):
     if request.method == 'GET':
         kwargs = dict(view='equipment.edit', equipment_id=eid)
-        data_to_fetch = ['equipment', 'deployments', 'all_deployments', 'all_organizations',
-                          'all_items', 'all_status']
+        data_to_fetch = ['equipment', 'deployments', 'all_deployments',
+                         'all_organizations', 'all_items', 'all_status']
         return fetch_data(data_to_fetch, **kwargs)
     else:
         values = parse_request(request, table='Equipment', rtype='edit')

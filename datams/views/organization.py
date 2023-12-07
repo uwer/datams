@@ -26,7 +26,7 @@ def edit(oid: int):
     data = organization_edit(oid, request)
     if request.method == 'GET' and data:
         return render_template('organization/edit.html', data=data)
-    elif request == 'POST':
+    elif request.method == 'POST':
         return redirect(url_for('organization.edit', oid=oid))
     else:
         return redirect(url_for('organization.root'))

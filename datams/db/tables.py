@@ -153,7 +153,7 @@ class Equipment(Base):
         ForeignKey('Organization.id', ondelete='SET NULL'), nullable=True
     )
 
-    serial_number: Mapped[str]
+    serial_number: Mapped[str] = mapped_column(unique=True)
     item: Mapped[str]
     status: Mapped[str]
     make: Mapped[Optional[str]]
