@@ -13,11 +13,6 @@ from xml.etree import ElementTree
 import seaborn as sns
 import yaml
 
-import logging
-logging.basicConfig()
-log = logging.getLogger()
-log.setLevel(logging.DEBUG)
-
 
 def expand_environmental_variables(d):
     if issubclass(type(d), str):
@@ -150,8 +145,8 @@ def move_pending_files(session):
             )
 
 
-def parse_dfiles(dfiles: str) -> List[str]:
-    log.debug(dfiles)
+# def parse_dfiles(dfiles: str) -> List[str]:
+#     log.debug(dfiles)
 
 
 def fileobj_to_jpgbytes(file_obj):

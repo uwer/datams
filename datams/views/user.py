@@ -3,6 +3,7 @@ from flask import (request, session, abort, redirect, flash, render_template, ur
 from flask_login import login_user, logout_user, login_required, current_user
 from datams.db.auth import authenticate_user
 from datams.utils import url_has_allowed_host_and_scheme
+from datams.db.views import user_password_reset, admin_options
 
 bp = Blueprint('user', __name__, url_prefix='/user')
 
@@ -11,9 +12,54 @@ bp = Blueprint('user', __name__, url_prefix='/user')
 @login_required
 def options():
     if current_user.role == 0:
-        return render_template('user/admin_options.html')
+        data = admin_options()
+        data['users']
+        return render_template('user/admin_options.html', data=data)
     else:
         return render_template('user/normal_options.html')
+
+
+# TODO: Finish Implementing the following methods
+@bp.route('/create', methods=('POST', ))
+@login_required
+def create():
+    if current_user.role != 0:
+        return redirect(request.referrer)
+    return redirect(request.referrer)
+
+
+@bp.route('/delete', methods=('POST', ))
+@login_required
+def delete():
+    if current_user.role != 0:
+        return redirect(request.referrer)
+    return redirect(request.referrer)
+
+
+@bp.route('/reset', methods=('POST', ))
+@login_required
+def reset():
+    if current_user.role != 0:
+        return redirect(request.referrer)
+    return redirect(request.referrer)
+
+
+@bp.route('/password_change/<required>', methods=('GET', 'POST'))
+@login_required
+def password_change(required: str):
+    logout_only = False if required == 'False' else True
+    # return render_template('user/password_reset.html')
+    data = dict(username=current_user.username, logout_only=logout_only)
+    if request.method == 'GET':
+        return render_template('user/password_change.html', data=data)
+    else:
+        try:
+            user_password_reset(request)
+        except RuntimeError as error:
+            flash(error.args[0])
+            return render_template('user/password_change.html', data=data)
+        flash('Password successfully updated. ')
+        return redirect(url_for('user.options'))
 
 
 @bp.route('/login', methods=('GET', 'POST'))

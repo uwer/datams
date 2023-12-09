@@ -48,9 +48,9 @@
     <label for="comments" class="form-label">Comments</label>
     <input type="textarea" class="form-control" name="comments" id="comments">
   </div>
-  <input id="ftype" name="ftype" type="hidden"  value="">
-  <input id="indexes" name="indexes" type="hidden" value="">
-  <input id="uploads_id" name="uploads_id" type="hidden" value="{{ data['uploads_id'] }}">
+  <input id="ftype" name="ftype" type="hidden"  value="" required>
+  <input id="indexes" name="indexes" type="hidden" value="" required>
+  <input id="uploads_id" name="uploads_id" type="hidden" value="{{ data['uploads_id'] }}" required>
   <div class="col-md-2">
     <button id="submitButton" type="submit" class="btn btn-primary">Submit</button>
   </div>

@@ -47,6 +47,9 @@ sqlparse = ">=0.4.4"
 tqdm = ">=4.66.1"
 werkzeug = ">=2.2.3"
 
-# [tool.poetry.scripts]
-# CREATION
-# datams-populate-db = "datams.db:populate_db"
+[tool.poetry.scripts]
+datams-init-db = "datams.cli:init_db_command"
+datams-wipe-db = "datams.cli:wipe_db_command"
+datams-resolve-files = "datams.cli:resolve_files_command"
+datams-create-user = "datams.cli:create_user_command"
+datams-delete-user = "datams.cli:delete_user_command"

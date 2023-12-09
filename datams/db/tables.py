@@ -232,6 +232,7 @@ class User(Base, UserMixin):
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     password: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[int]  # 0 is admin, 1 is editor, 2 is viewer
+    password_expired: Mapped[int]  # 0 is no, anything else is yes
     reset_key: Mapped[Optional[str]]
 
 

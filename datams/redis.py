@@ -2,17 +2,12 @@ from io import StringIO
 import pandas as pd
 from flask import Flask, current_app, g
 from redis import Redis
-from typing import Union, Any
-from datams.utils import APP_CONFIG, REMOVE_STALES_EVERY
+from typing import Any
+from datams.utils import APP_CONFIG
 import datetime as dt
 import time
 import functools
 
-
-import logging
-logging.basicConfig()
-log = logging.getLogger()
-log.setLevel(logging.DEBUG)
 
 # interval between attempts to acquire lock
 RETRY_INTERVAL = dict(checkins=0.05, default=0.05)  # seconds

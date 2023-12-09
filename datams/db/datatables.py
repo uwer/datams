@@ -1,10 +1,5 @@
 import flask
 from datams.redis import get_value
-import logging
-
-logging.basicConfig()
-log = logging.getLogger()
-log.setLevel(logging.DEBUG)
 
 """
     # The draw counter that this object is a response to - from the draw parameter sent
@@ -80,10 +75,6 @@ def fetch(request: flask.Request):
                 cargs[key] = False if v == 'false' else True
                 column_attributes[cidx] = cargs
     df = get_value(f"vkey_{uploads_id}_{ftype}")[[v for v in cmap.values()]]
-    # log.debug(df.columns)
-    # log.debug(" + ' ' + ".join(
-    #             [f"df['{i}']" for i in cmap.values()
-    #              if i != 'url' and i != 'filepath' and i != 'name']))
     search_value = request_values['search[value]']
     if search_value != '':
         for i in ['.', '+', '?', '^', '$', '|', '&']:

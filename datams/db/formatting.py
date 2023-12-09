@@ -343,3 +343,15 @@ def organization_format(df, compute=None):
 
     remaing_compute_check(compute)
     return df
+
+
+def user_format(df, compute=None):
+    df, compute = setup_compute(df, compute)
+    if df.empty:
+        return df
+
+    if 'role' in df.columns:
+        df['role'] = df['role'].apply(lambda x: 'Admin' if x == 0 else 'Normal')
+
+    remaing_compute_check(compute)
+    return df

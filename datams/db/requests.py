@@ -32,7 +32,7 @@ def parse_request(request, table, rtype):
     elif table == 'Organization':
         values = extract_organization_fields(request, rtype=rtype)
     elif table == 'User':
-        values = extract_user_fields(request, strict=True)
+        values = extract_user_fields(request, rtype=rtype)
     else:
         raise NotImplementedError(table)
     return values
@@ -85,12 +85,33 @@ def uploaded_filepath(value: str):
     return [f"{PROCESSED_DIRECTORY}/{secure_filename(f)}" for f in value.split(',')]
 
 
-def extract_user_fields(request, strict):
-    form_fields = {
-        'email': ('user_email', str),
-        'password': ('user_password', str)
-    }
-    return get_fields(request, strict, form_fields)
+def extract_user_fields(request, rtype):
+    strict = True
+    if rtype == 'auth':
+        form_fields = {
+            'email': ('email', str),
+            'password': ('password', str)
+        }
+        values = get_fields(request, strict, form_fields)
+        values['email'] = values['email'].lower()
+    elif rtype == 'password_reset':
+        form_fields = {
+            'current_password': ('current_password', str),
+            'new_password': ('new_password', str),
+            'confirmed_new_password': ('confirmed_new_password', str),
+            'username': ('username', str),
+        }
+        values = get_fields(request, strict, form_fields)
+        values['view'] = 'user.by_username'
+        if len(values['new_password']) < 6:
+            raise ValueError('New password must be at least 6 characters.  ')
+        if values['new_password'] != values['confirmed_new_password']:
+            raise ValueError('New password entries do not match.  ')
+        if values['new_password'] == values['current_password']:
+            raise ValueError('New password should differ from current password.  ')
+    else:
+        values = None
+    return values
 
 
 def extract_contact_fields(request, rtype):

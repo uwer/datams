@@ -2,17 +2,11 @@ import datetime as dt
 import flask
 import pandas as pd
 from functools import partial
-# from datams.utils import move_pending_files
-# from datams.celery import load_processed_files
 from datams.db.requests import parse_request
 from datams.db.utils import (mooring_add_equipment_html, mooring_files_add_section,
                              map_properties)
 from datams.db.queries import select_query, insert_query, update_query, delete_query
-
-import logging
-logging.basicConfig()
-log = logging.getLogger()
-log.setLevel(logging.DEBUG)
+from werkzeug.security import check_password_hash, generate_password_hash
 
 """
 This module acts as a layer between the database and the web application views, 
@@ -57,6 +51,8 @@ def fetch_data(requested_data, **kwargs):
         mooring=partial(select_query, data='mooring', **kwargs),
         organizations=partial(select_query, data='organization', **kwargs),
         organization=partial(select_query, data='organization', **kwargs),
+        user=partial(select_query, data='user', **kwargs),
+        users=partial(select_query, data='user', **kwargs),
         all_countries=partial(select_query, data='country'),
         all_contacts=partial(select_query, data='contact'),
         all_deployments=partial(select_query, data='deployment'),
@@ -335,3 +331,22 @@ def organization_edit(oid: int, request: flask.request):
 def organization_delete(oid):
     delete_query(table='Organization', organization_id=oid)
     # load_processed_files()
+
+
+def user_password_reset(request: flask.Request):
+    kwargs = parse_request(request, 'User', rtype='password_reset')
+    user = fetch_data(['user'], **kwargs)['user']
+    if user is None:
+        raise RuntimeError(f"Error resetting password.  ")
+    if not check_password_hash(user.password, kwargs['current_password']):
+        raise RuntimeError(f"Incorrect password.  ")
+    else:
+        values = dict(password=generate_password_hash(kwargs['new_password']),
+                      password_expired=0)
+        update_query(table='User', values=values, user_id=user.id)
+
+
+def admin_options():
+    kwargs = dict(view='admin.options')
+    data_to_fetch = ['users']
+    return fetch_data(data_to_fetch, **kwargs)

@@ -13,13 +13,8 @@ from datams.db.tables import (
 )
 from datams.db.formatting import (
     contact_format, deployment_format, organization_format, mooring_format,
-    equipment_format, file_format, deleted_file_format
+    equipment_format, file_format, deleted_file_format, user_format
 )
-import logging
-
-logging.basicConfig()
-log = logging.getLogger()
-log.setLevel(logging.DEBUG)
 
 # TODO: Add sorting to here or data_for_views where appropriate
 # TODO: Rename occurances of file/files (that correspond to processed files) to
@@ -62,6 +57,8 @@ def select_query(data, **kwargs):
         return select_moorings(**kwargs)
     elif data == 'organization':
         return select_organizations(**kwargs)
+    elif data == 'user':
+        return select_user(**kwargs)
     elif data == 'country':
         return select_countries()
     elif data == 'contact_positions':
@@ -158,7 +155,7 @@ def select_discovered_files():
     if None in normal_files:
         normal_files.remove(None)
     filepaths = sorted(list(normal_files.difference(touched_files)))
-    log.debug(len(Path(DISCOVERY_DIRECTORY).parts))
+    # log.debug(len(Path(DISCOVERY_DIRECTORY).parts))
     filenames = [
         str(Path(*Path(f).parts[len(Path(DISCOVERY_DIRECTORY).parts):]))
         for f in filepaths
@@ -177,7 +174,7 @@ def select_deleted_files():
                   DeletedFile.description, DeletedFile.path, DeletedFile.uploaded,
                   DeletedFile.comments, DeletedFile.name, DeletedFile.deleted)
     df = deleted_file_format(query_df(stmt), compute=['filename'])
-    log.debug(df.columns)
+    # log.debug(df.columns)
     return df
 
 
@@ -220,13 +217,21 @@ def select_countries():
 
 def select_user(view, **kwargs):
     query_def = {
-        'load_user': User.id == kwargs.get('user_id'),
-        'authenticate_user': User.email == kwargs.get('user_email'),
+        'user.by_id': User.id == kwargs.get('uid'),
+        'user.by_email': User.email == kwargs.get('email'),
+        'user.by_username': User.username == kwargs.get('username'),
+        'admin.options': (['id', 'username', 'email', 'role'], None),
     }
-    stmt = select(User)
-    where = query_def[view]
-    stmt = stmt if where is None else stmt.where(where)
-    return query_first(stmt)
+    if view == 'admin.options':
+        stmt = select(User.id, User.username, User.email, User.role)
+        c, w = query_def[view]
+        stmt = stmt if w is None else stmt.where(w)
+        return user_format(query_df(stmt))[c]
+    else:
+        stmt = select(User)
+        where = query_def[view]
+        stmt = stmt if where is None else stmt.where(where)
+        return query_first(stmt)
 
 
 def select_contacts(view=None, **kwargs):

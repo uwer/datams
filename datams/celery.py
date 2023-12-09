@@ -1,7 +1,4 @@
-import functools
-from typing import Tuple, Any
-
-import pandas as pd
+from typing import Any
 from flask import Flask
 from celery import Celery, Task, shared_task
 

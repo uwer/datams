@@ -1,0 +1,24 @@
+<form class="row g-3" method="POST" action="{{ url_for('user.create') }}">
+  <div class="col-md-6">
+    <label for="username" class="form-label">Username</label>
+    <input type="text" class="form-control" name="username" id="username" autocomplete="username" required>
+  </div>
+  <div class="col-md-6">
+    <label for="email" class="form-label">Email</label>
+    <input type="email" class="form-control" name="email" id="email" required>
+  </div>
+  <div class="col-md-12">
+    <label for="password" class="sr-only pt-2">Password</label>
+    <input type="password" id="password" name="password" class="form-control" placeholder="Password" autocomplete='new-password' onfocusout="verifyConditions()" required>
+  </div>
+  <div class="col-md-12">
+    <label for="confirmed_password" class="sr-only pt-2">Confirm Password</label>
+    <input type="password" id="confirmed_password" name="confirmed_password" class="form-control" placeholder="Password" autocomplete='new-password' onfocusout="verifyMatch()" required>
+  </div>
+  <div class="col-md-2">
+    <button type="submit" class="btn btn-primary">Submit</button>
+  </div>
+  <div class="col-md-2">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+  </div>
+</form>

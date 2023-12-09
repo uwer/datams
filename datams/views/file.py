@@ -2,7 +2,7 @@ import os
 import pandas as pd
 import datetime as dt
 from flask import (Blueprint, render_template, request, redirect, send_file, url_for,
-                   jsonify, make_response)
+                   jsonify, make_response, current_app)
 from flask_login import login_required, current_user
 from datams.celery import (update_task, compute_and_set_task, task_complete,
                            update_vkey, set_working)
@@ -16,16 +16,11 @@ from datams.utils import PENDING_DIRECTORY, PROCESSED_DIRECTORY
 from werkzeug.utils import secure_filename
 from datams.db.queries.insert import insert_files
 from datams.db.queries.update import update_files
-import logging
 
 from sqlalchemy import select, insert
 from sqlalchemy import delete as sdelete
 from datams.db.core import query_all, query_df
 from datams.db.tables import File, DeletedFile
-
-logging.basicConfig()
-log = logging.getLogger()
-log.setLevel(logging.DEBUG)
 
 # CHUNK_SIZE = 1000000  # ~1MB
 
@@ -44,7 +39,7 @@ def upload():
         PENDING_DIRECTORY,
         f".{secure_filename(file.filename)}"
     )
-    log.debug(save_path)
+    current_app.logger.debug(save_path)
     current_chunk = int(request.form['dzchunkindex'])
 
     # If the file already exists it's ok if we are appending to it,
@@ -58,23 +53,23 @@ def upload():
             f.write(file.stream.read())
     except OSError:
         # log.exception will include the traceback so we can see what's wrong
-        log.exception('Could not write to file')
+        current_app.logger.exception('Could not write to file')
         return make_response(("Not sure why, but we couldn't write the file to disk",
                               500))
     total_chunks = int(request.form['dztotalchunkcount'])
     if current_chunk + 1 == total_chunks:
         # This was the last chunk, the file should be complete and the size we expect
         if os.path.getsize(save_path) != int(request.form['dztotalfilesize']):
-            log.error(f"File {file.filename} was completed, "
+            current_app.logger.error(f"File {file.filename} was completed, "
                       f"but has a size mismatch."
                       f"Was {os.path.getsize(save_path)} but we"
                       f" expected {request.form['dztotalfilesize']} ")
             return make_response(('Size mismatch', 500))
         else:
             filename = os.path.basename(save_path)
-            log.info(f'File {filename} has been uploaded successfully')
+            current_app.logger.info(f'File {filename} has been uploaded successfully')
     else:
-        log.debug(f'Chunk {current_chunk + 1} of {total_chunks} '
+        current_app.logger.debug(f'Chunk {current_chunk + 1} of {total_chunks} '
                   f'for file {file.filename} complete')
     return make_response(("Chunk upload successful", 200))
 
@@ -247,14 +242,14 @@ def process():
                 cdir_count += 1
             except Exception as error:  # TODO: use specific errors
                 # TODO: Flash this error with the files that didn't work to the user
-                log.error(error)
+                current_app.logger.error(error)
         values['paths'] = paths
         values['names'] = names
         try:
             insert_files(values)
         except Exception as error:  # TODO: use specific errors
             # TODO: Flash this error and inform user of rollback
-            log.error(error)
+            current_app.logger.error(error)
             # rollback all the renames
             for path_orig, path_new in moves:
                 os.rename(path_new, path_orig)
@@ -272,8 +267,8 @@ def process():
             try:
                 filepath = df.loc[df['id'] == idx, 'filepath'].iloc[0]
                 name = os.path.basename(df.loc[df['id'] == idx, 'filename'].iloc[0])
-                log.debug(filepath)
-                log.debug(type(filepath))
+                current_app.logger.debug(filepath)
+                current_app.logger.debug(type(filepath))
                 touch = f"{filepath}.touch"
                 with open(touch, 'at') as fp:
                     pass
@@ -282,7 +277,7 @@ def process():
                 names.append(name)
             except Exception as error:  # TODO: use specific errors
                 # TODO: Flash this error with the files that didn't work to the user
-                log.error(error)
+                current_app.logger.error(error)
 
         values['paths'] = paths
         values['names'] = names
@@ -290,7 +285,7 @@ def process():
             insert_files(values)
         except Exception as error:  # TODO: use specific errors
             # TODO: Flash this error and inform user of rollback
-            log.error(error)
+            current_app.logger.error(error)
             # rollback all the touches
             for touch in touches:
                 os.remove(touch)
