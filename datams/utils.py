@@ -13,6 +13,7 @@ from xml.etree import ElementTree
 import seaborn as sns
 import yaml
 
+from flask import current_app
 
 def expand_environmental_variables(d):
     if issubclass(type(d), str):

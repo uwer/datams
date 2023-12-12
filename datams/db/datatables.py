@@ -74,7 +74,7 @@ def fetch(request: flask.Request):
                 cargs = column_attributes.get(cidx, dict())
                 cargs[key] = False if v == 'false' else True
                 column_attributes[cidx] = cargs
-    df = get_value(f"vkey_{uploads_id}_{ftype}")[[v for v in cmap.values()]]
+    df = get_value(f"vkey.{uploads_id}.{ftype}")[[v for v in cmap.values()]]
     search_value = request_values['search[value]']
     if search_value != '':
         for i in ['.', '+', '?', '^', '$', '|', '&']:

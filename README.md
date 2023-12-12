@@ -194,5 +194,12 @@ If this is not the correct location then it can be found using
 $ celery --app make_celery worker --loglevel=DEBUG --pool=solo
 $ celery --app make_celery beat
 $ flask --app datams run --debug
-$ flask --app datams init-db
+
 $ gunicorn --bind 127.0.0.1:5000 wsgi:app
+
+$ flask --app datams init-db      # datams-init-db
+$ flask --app datams wipe-db      # datams-wipe-db
+$ flask --app datams create-user  # datams-create-user
+$ flask --app datams delete-user  # datams-delete-user
+
+

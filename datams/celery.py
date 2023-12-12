@@ -27,7 +27,7 @@ def compute_and_set_task(key) -> None:
 @shared_task(name='set_vkey')
 def set_vkey_task(_, vkey):
     set_working(vkey)
-    root_key = '_'.join(vkey.split('_')[2:])
+    root_key = '.'.join(vkey.split('.')[3:])
     value = get_value(root_key).to_json()
     set_value(vkey, value)
     set_finished(vkey)
@@ -35,7 +35,7 @@ def set_vkey_task(_, vkey):
 
 def update_vkey(vkey):
     set_working(vkey)
-    root_key = '_'.join(vkey.split('_')[2:])
+    root_key = '.'.join(vkey.split('.')[3:])
     chain = (compute_and_set_task.s(root_key) | set_vkey_task.s(vkey))
     chain()
 

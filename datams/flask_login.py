@@ -4,7 +4,6 @@ from flask import url_for, redirect, request, current_app
 
 
 def check_password_expiry():
-    current_app.logger.debug(current_user.is_authenticated)
     if reset_required(request.path):
         return redirect(url_for('user.password_change', required=True))
 

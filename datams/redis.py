@@ -129,9 +129,9 @@ def get_value(key: str) -> Any:
         checkins=(eval, []),
     )
     is_vkey = False
-    if key.startswith('vkey_'):
+    if key.startswith('vkey.'):
         is_vkey = True
-        root_key = '_'.join(key.split('_')[2:])
+        root_key = '.'.join(key.split('.')[3:])
     else:
         root_key = key
     if root_key not in key_conversion_default.keys():
@@ -151,7 +151,9 @@ def get_value(key: str) -> Any:
 #       seeing if the uploads_id is valid rather than explicitly listing each type.
 def remove_stale_vkeys(valid_uids):
     redis = get_redis()
-    delete = [k for k in redis.scan_iter("vkey_*") if k.split('_')[1] not in valid_uids]
+    delete = [k for k in redis.scan_iter("vkey.*")
+              if '.'.join(k.split('.')[1:3]) not in valid_uids]
+    current_app.logger.debug(['.'.join(k.split('.')[1:3]) for k in delete])
     for k in delete:
         redis.delete(k)
 

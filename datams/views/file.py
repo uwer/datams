@@ -143,7 +143,7 @@ def delete():
         active_tab = 'nav-pending-uploads'
         indexes = values.pop('indexes')
         # get all the indexes from the table
-        df = get_value(f"vkey_{uploads_id}_pending_files").drop(columns=['uploaded_by'])
+        df = get_value(f"vkey.{uploads_id}.pending_files").drop(columns=['uploaded_by'])
         df = df.loc[df['id'].isin(indexes), :]
         df['ftype'] = 'pending_file'
         df['deleted'] = int(round(dt.datetime.now().timestamp()))
@@ -169,7 +169,7 @@ def delete():
 def restore():
     values = parse_request(request, table='File', rtype='restore')
     uploads_id, indexes = values.pop('uploads_id'), values.pop('indexes')
-    # df = get_value(f"vkey_{uploads_id}_deleted_files")
+    # df = get_value(f"vkey.{uploads_id}.deleted_files")
     stmt = select(DeletedFile.id, DeletedFile.original_id, DeletedFile.organization_id,
                   DeletedFile.deployment_id, DeletedFile.mooring_equipment_id,
                   DeletedFile.path, DeletedFile.name, DeletedFile.description,
@@ -223,7 +223,7 @@ def process():
     if ftype == 'pending_files':
         active_tab = 'nav-pending-uploads'
         indexes = values.pop('indexes')
-        df = get_value(f"vkey_{uploads_id}_pending_files")
+        df = get_value(f"vkey.{uploads_id}.pending_files")
         cdir, cdir_idx, cdir_count = resolve_directory(PROCESSED_DIRECTORY)
         moves, paths, names = [], [], []
         for idx in indexes:
@@ -261,7 +261,7 @@ def process():
     elif ftype == 'discovered_files':
         active_tab = 'nav-pending-discoveries'
         indexes = values.pop('indexes')
-        df = get_value(f"vkey_{uploads_id}_discovered_files")
+        df = get_value(f"vkey.{uploads_id}.discovered_files")
         touches, paths, names = [], [], []
         for idx in indexes:
             try:
@@ -305,7 +305,7 @@ def download():
     uploads_id = request_values.get('uploads_id')
     ftype = request_values['ftype']
     index = int(request_values['index'])
-    df = get_value(ftype) if uploads_id is None else get_value(f"vkey_{uploads_id}_{ftype}")
+    df = get_value(ftype) if uploads_id is None else get_value(f"vkey.{uploads_id}.{ftype}")
     filepath, filename = tuple(
         df.loc[df['id'] == index, ['filepath', 'filename']].iloc[0]
     )

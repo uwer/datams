@@ -123,10 +123,10 @@ function loadTables(){
     "{{ url_for('file.ready', key='deleted_files') }}"
   ];
   {#let refresh_urls = [
-    "{{ url_for('file.refresh', vkey='vkey_' + data['uploads_id'] + '_processed_files') }}", 
-    "{{ url_for('file.refresh', vkey='vkey_' + data['uploads_id'] + '_pending_files') }}",
-    "{{ url_for('file.refresh', vkey='vkey_' + data['uploads_id'] + '_discovered_files') }}",
-    "{{ url_for('file.refresh', vkey='vkey_' + data['uploads_id'] + '_deleted_files') }}"
+    "{{ url_for('file.refresh', vkey='vkey.' + data['uploads_id'] + '.processed_files') }}", 
+    "{{ url_for('file.refresh', vkey='vkey.' + data['uploads_id'] + '.pending_files') }}",
+    "{{ url_for('file.refresh', vkey='vkey.' + data['uploads_id'] + '.discovered_files') }}",
+    "{{ url_for('file.refresh', vkey='vkey.' + data['uploads_id'] + '.deleted_files') }}"
   ];#}
   let xhttps = [];
   for (let i=0; i<tids.length; i++){
@@ -461,24 +461,24 @@ function refreshList(tid) {
   if (tid == 'processedFileTable') {
     var bid = 'processedRefreshButton';
     var button_ids = ['processedEditButton', 'processedRefreshButton', 'processedDownloadButton', 'processedDetailsButton', 'processedDeleteButton'];
-    var refresh_url = "{{ url_for('file.refresh', vkey='vkey_' + data['uploads_id'] + '_processed_files') }}";
+    var refresh_url = "{{ url_for('file.refresh', vkey='vkey.' + data['uploads_id'] + '.processed_files') }}";
   } 
   
   else if (tid == 'pendingFileTable') {
     var bid = 'pendingRefreshButton';
     var button_ids = ['pendingProcessButton', 'pendingRefreshButton', 'pendingDownloadButton', 'pendingDeleteButton'];
-    var refresh_url = "{{ url_for('file.refresh', vkey='vkey_' + data['uploads_id'] + '_pending_files') }}";
+    var refresh_url = "{{ url_for('file.refresh', vkey='vkey.' + data['uploads_id'] + '.pending_files') }}";
   } 
   
   else if (tid == 'discoveredFileTable') {
     var bid = 'discoveredRefreshButton';
     var button_ids = ['discoveredProcessButton', 'discoveredRefreshButton', 'discoveredDownloadButton'];
-    var refresh_url = "{{ url_for('file.refresh', vkey='vkey_' + data['uploads_id'] + '_discovered_files') }}";
+    var refresh_url = "{{ url_for('file.refresh', vkey='vkey.' + data['uploads_id'] + '.discovered_files') }}";
   }
   else { // tid == 'deletedFileTable'
     var bid = 'deletedRefreshButton';
     var button_ids = ['restoreDeletedButton', 'deletedRefreshButton'];
-    var refresh_url = "{{ url_for('file.refresh', vkey='vkey_' + data['uploads_id'] + '_deleted_files') }}";
+    var refresh_url = "{{ url_for('file.refresh', vkey='vkey.' + data['uploads_id'] + '.deleted_files') }}";
   }
   //console.log(bid);
   //console.log(refresh_url);
@@ -507,22 +507,22 @@ function refreshList(tid) {
 function refresh_when_ready(tid){
   if (tid == 'processedFileTable') {
     var bid = 'processedRefreshButton';
-    var ready_url = "{{ url_for('file.ready', key='vkey_' + data['uploads_id'] + '_processed_files') }}";
+    var ready_url = "{{ url_for('file.ready', key='vkey.' + data['uploads_id'] + '.processed_files') }}";
   } 
   
   else if (tid == 'pendingFileTable') {
     var bid = 'pendingRefreshButton';
-    var ready_url = "{{ url_for('file.ready', key='vkey_' + data['uploads_id'] + '_pending_files') }}";
+    var ready_url = "{{ url_for('file.ready', key='vkey.' + data['uploads_id'] + '.pending_files') }}";
   } 
   
   else if (tid == 'discoveredFileTable') {
     var bid = 'discoveredRefreshButton';
-    var ready_url = "{{ url_for('file.ready', key='vkey_' + data['uploads_id'] + '_discovered_files') }}";
+    var ready_url = "{{ url_for('file.ready', key='vkey.' + data['uploads_id'] + '.discovered_files') }}";
   }
   
   else { // tid == deletedFileTable
     var bid = 'deletedRefreshButton';
-    var ready_url = "{{ url_for('file.ready', key='vkey_' + data['uploads_id'] + '_deleted_files') }}";
+    var ready_url = "{{ url_for('file.ready', key='vkey.' + data['uploads_id'] + '.deleted_files') }}";
   } 
   
   let refresh_button = document.getElementById(bid);
@@ -554,22 +554,22 @@ function refresh_when_ready(tid){
 function refresh_when_ready_orig(tid, stage){
   if (tid == 'processedFileTable') {
     var bid = 'processedRefreshButton';
-    var ready_urls = ["{{ url_for('file.ready', key='processed_files') }}", "{{ url_for('file.ready', key='vkey_' + data['uploads_id'] + '_processed_files') }}"];
+    var ready_urls = ["{{ url_for('file.ready', key='processed_files') }}", "{{ url_for('file.ready', key='vkey.' + data['uploads_id'] + '.processed_files') }}"];
   } 
   
   else if (tid == 'pendingFileTable') {
     var bid = 'pendingRefreshButton';
-    var ready_urls = ["{{ url_for('file.ready', key='pending_files') }}", "{{ url_for('file.ready', key='vkey_' + data['uploads_id'] + '_pending_files') }}"];
+    var ready_urls = ["{{ url_for('file.ready', key='pending_files') }}", "{{ url_for('file.ready', key='vkey.' + data['uploads_id'] + '.pending_files') }}"];
   } 
   
   else if (tid == 'discoveredFileTable') {
     var bid = 'discoveredRefreshButton';
-    var ready_urls = ["{{ url_for('file.ready', key='discovered_files') }}", "{{ url_for('file.ready', key='vkey_' + data['uploads_id'] + '_discovered_files') }}"];
+    var ready_urls = ["{{ url_for('file.ready', key='discovered_files') }}", "{{ url_for('file.ready', key='vkey.' + data['uploads_id'] + '.discovered_files') }}"];
   }
   
   else { // tid == deletedFileTable
     var bid = 'deletedRefreshButton';
-    var ready_urls = ["{{ url_for('file.ready', key='deleted_files') }}", "{{ url_for('file.ready', key='vkey_' + data['uploads_id'] + '_deleted_files') }}"];
+    var ready_urls = ["{{ url_for('file.ready', key='deleted_files') }}", "{{ url_for('file.ready', key='vkey.' + data['uploads_id'] + '.deleted_files') }}"];
   } 
   
   let refresh_button = document.getElementById(bid);

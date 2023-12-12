@@ -2,7 +2,7 @@ from typing import Dict
 import flask
 from werkzeug.utils import secure_filename
 from datams.utils import (fileobj_to_jpgbytes, datetimestr_to_timestamp,
-                          current_timestamp, PROCESSED_DIRECTORY)
+                          current_timestamp, PROCESSED_DIRECTORY, ALLOWED_CHARACTERS)
 
 from datams.db.utils import MissingRequiredDataError
 from datams.db.queries.select import select_mooring_equipment_id, next_deployment_id
@@ -127,11 +127,15 @@ def extract_contact_fields(request, rtype):
     file_fields = {
         'avatar': ('avatar', fileobj_to_jpgbytes)
     }
-    if rtype == 'edit':
-        strict = False
-    else:
-        strict = True
-    return get_fields(request, strict, form_fields, file_fields)
+    to_verify = ['position', 'first_name', 'last_name', 'comments']
+    values = (get_fields(request, False, form_fields, file_fields) if rtype == 'edit'
+              else get_fields(request, True, form_fields, file_fields))
+    for i in to_verify:
+        if i in values.keys() and not set(values[i]).issubset(ALLOWED_CHARACTERS):
+            raise RuntimeError(f"{i} contains restricted characters.  Allowed "
+                               f"characters include alpha numeric characters, "
+                               f"underscore, and dash.  ")
+    return values
 
 
 def extract_deployment_fields(request: flask.Request, rtype):
@@ -140,6 +144,7 @@ def extract_deployment_fields(request: flask.Request, rtype):
         'country_id': ('country_id', int),
         'comments': ('comments', str),
     }
+    to_verify = ['region', 'comments']
     if rtype == 'edit':
         strict = False
         associations = ['contact']
@@ -159,6 +164,11 @@ def extract_deployment_fields(request: flask.Request, rtype):
                                  for r in request.form.keys()
                                  if r.startswith('organization_id')]
         }
+    for i in to_verify:
+        if i in values.keys() and not set(values[i]).issubset(ALLOWED_CHARACTERS):
+            raise RuntimeError(f"{i} contains restricted characters.  Allowed "
+                               f"characters include alpha numeric characters, "
+                               f"underscore, and dash.  ")
     return values
 
 
@@ -172,38 +182,15 @@ def extract_equipment_fields(request, rtype):
         'status': ('status', str),
         'comments': ('comments', str)
     }
-    if rtype == 'edit':
-        strict = False
-    else:
-        strict = True
-    return get_fields(request, strict, form_fields)
-
-
-# def extract_file_fields_orig(request, rtype):
-#     form_fields = {
-#         'files': ('paths', uploaded_filepath),
-#         'description': ('description', str),
-#         'comments': ('comments', str),
-#         'level': ('level', str),
-#     }
-#     strict = False if rtype == 'edit' else True
-#     values = get_fields(request, strict, form_fields)
-#     values['uploaded'] = current_timestamp()
-#     values['organization_id'] = None
-#     values['deployment_id'] = None
-#     values['mooring_equipment_id'] = None
-#     level = values.pop('level')
-#     if level == 'organization':
-#         values['organization_id'] = get_form_field(request, 'organization_id', int)
-#     elif level == 'deployment':
-#         values['deployment_id'] = get_form_field(request, 'deployment_id', int)
-#     elif level == 'mooring_equipment':
-#         mid = get_form_field(request, f"mooring_id", int)
-#         eid = get_form_field(request, f"equipment_id", int)
-#         values['mooring_equipment_id'] = select_mooring_equipment_id(mid, eid)
-#     else:  # unowned
-#         pass
-#     return values
+    to_verify = ['serial_number', 'item', 'make', 'model', 'status', 'comments']
+    values = (get_fields(request, False, form_fields) if rtype == 'edit'
+              else get_fields(request, True, form_fields))
+    for i in to_verify:
+        if i in values.keys() and not set(values[i]).issubset(ALLOWED_CHARACTERS):
+            raise RuntimeError(f"{i} contains restricted characters.  Allowed "
+                               f"characters include alpha numeric characters, "
+                               f"underscore, and dash.  ")
+    return values
 
 
 def extract_file_fields(request, rtype):
@@ -240,15 +227,13 @@ def extract_file_fields(request, rtype):
             'indexes': ('indexes', eval),
             'uploads_id': ('uploads_id', str),
         }
-        strict = True
-        values = get_fields(request, strict, form_fields)
+        values = get_fields(request, True, form_fields)
     elif rtype == 'restore':
         form_fields = {
             'indexes': ('indexes', eval),
             'uploads_id': ('uploads_id', str),
         }
-        strict = True
-        values = get_fields(request, strict, form_fields)
+        values = get_fields(request, True, form_fields)
     else:
         values = None
     return values
@@ -284,15 +269,18 @@ def extract_organization_fields(request, rtype):
         'country_id': ('country_id', int),
         'comments': ('comments', str)
     }
+    to_verify = ['name', 'abbreviation', 'comments']
     if rtype == 'edit':
-        strict = False
         associations = ['contact', 'deployment', 'equipment']
         values = {**fetch_associations(request, associations),
-                  **get_fields(request, strict, form_fields)}
+                  **get_fields(request, False, form_fields)}
     else:
-        strict = True
-        values = get_fields(request, strict, form_fields)
-
+        values = get_fields(request, True, form_fields)
+    for i in to_verify:
+        if i in values.keys() and not set(values[i]).issubset(ALLOWED_CHARACTERS):
+            raise RuntimeError(f"{i} contains restricted characters.  Allowed "
+                               f"characters include alpha numeric characters, "
+                               f"underscore, and dash.  ")
     return values
 
 
