@@ -197,9 +197,9 @@ $ flask --app datams run --debug
 
 $ gunicorn --bind 127.0.0.1:5000 wsgi:app
 
-$ flask --app datams init-db      # datams-init-db
-$ flask --app datams wipe-db      # datams-wipe-db
-$ flask --app datams create-user  # datams-create-user
-$ flask --app datams delete-user  # datams-delete-user
-
+$ flask --app datams init-db        # datams-init-db
+$ flask --app datams wipe-db        # datams-wipe-db
+$ flask --app datams create-user    # datams-create-user
+$ flask --app datams delete-user    # datams-delete-user
+$ flask --app datams resolve-files  # datams-resolve-files
 
