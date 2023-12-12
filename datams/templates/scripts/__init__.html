@@ -6,7 +6,7 @@
   {% include "/scripts/format_map.html" %}
 {% endmacro %}
 
-{% macro format_table(id, dom='t', paging=false, pagelength=10, highlight=true, header=true, serverside='') %}
+{% macro format_table(id, dom='t', paging=false, pagelength=10, lengthmenu=[10, 25, 50, 100], highlight=true, header=true, selectable=false, serverside='') %}
   {% include "/scripts/format_table.html" %}
 {% endmacro %}
 

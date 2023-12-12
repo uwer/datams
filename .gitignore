@@ -4,5 +4,11 @@
 *Thumbs.db
 dist
 datams.egg-info
-uploads/*
 TODO.txt
+datams/config.yml
+data
+populate_db.py
+untouch.py
+celerybeat-schedule.dat
+celerybeat-schedule.bak
+celerybeat-schedule.dir

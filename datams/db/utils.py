@@ -4,9 +4,7 @@ import pandas as pd
 from math import floor, log, cos, pi
 from sqlalchemy import create_engine
 
-from datams.utils import APP_CONFIG
-from datams.db.tables import Base
-
+DIRECTORY_LIMIT = 65000
 
 class MissingRequiredDataError(Exception):
     """
@@ -22,27 +20,71 @@ class MissingRequiredDataError(Exception):
         super().__init__(self.message)
 
 
-def create_upload_directories(paths):
-    for p in paths:
+def resolve_filename(filename, directory):
+    i = 0
+    new_filename = filename
+    while new_filename in os.listdir(directory):
+        fl = filename.split('.')
+        new_filename = (f"{'.'.join(fl[:-1])} ({i}).{fl[-1]}"
+                        if len(fl) > 1 else f"{filename} ({i})")
+        i += 1
+    return new_filename
+
+
+def is_int_directory(directory):
+    try:
+        int(directory)
+    except TypeError:
+        return False
+    return True
+
+
+def check_directory_fullness(root_dir, cdir_idx, cdir_count):
+    cdir = f"{root_dir}/{cdir_idx}"
+    while cdir_count >= DIRECTORY_LIMIT:
+        cdir_idx += 1
+        cdir = f"{root_dir}/{cdir_idx}"
+        os.makedirs(cdir, exist_ok=True)
+        cdir_count = len(os.listdir(cdir))
+    return cdir, cdir_idx, cdir_count
+
+
+def resolve_directory(root_dir):
+    int_dirs = [i for i in os.listdir(root_dir)
+                if os.path.isdir(f"{root_dir}/{i}") and is_int_directory(i)]
+    cdir_idx = max(int_dirs) if int_dirs else 0
+    cdir = f"{root_dir}/{cdir_idx}"
+    if not int_dirs:
+        os.makedirs(cdir, exist_ok=True)
+    cdir_count = len(os.listdir(cdir))
+    return check_directory_fullness(root_dir, cdir_idx, cdir_count)
+
+
+def create_upload_directories(path):
+    for d in {'pending', 'processed'}:
         try:
-            os.makedirs(p, exist_ok=True)
+            os.makedirs(f"{path}/{d}", exist_ok=True)
         except OSError:
-            raise OSError(f"Failed to create directory `{p}` required for uploading.  ")
+            raise OSError(f"Failed to create directory `{path}/{d}` required for "
+                          f"uploading.  ")
+
+
+def validate_discovery_directory(path):
+    if not os.path.exists(path):
+        raise NotADirectoryError(f"Discovery directory, at `{path}` does not exist.")
+    elif os.path.isfile(path):
+        raise FileExistsError(f"Discovery directory, `{path}` must reference existing "
+                              f"directory instead of a file.  ")
+    return
 
 
 def generate_database_url(dialect, driver, username, password, host, port, database):
     return f"{dialect}+{driver}://{username}:{password}@{host}:{port}/{database}"
 
 
-def conect_and_return_engine():
-    url = generate_database_url(**APP_CONFIG['DATABASE'])
+def connect_and_return_engine(app_config):
+    url = generate_database_url(**app_config['DATABASE'])
     return create_engine(url)
-
-
-def initialize_db():
-    engine = conect_and_return_engine()
-    Base.metadata.drop_all(engine)
-    Base.metadata.create_all(engine)
 
 
 def result_to_df(result):

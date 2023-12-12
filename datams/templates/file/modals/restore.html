@@ -1,0 +1,13 @@
+<form class="row g-3" method="POST" action="{{ url_for('file.restore') }}">
+  <div class="col-md-12">
+    <p>Are you sure you want to restore the selected file(s)?</p>
+  </div>
+  <input id="restore_uploads_id" name="uploads_id" type="hidden"  value="{{ data['uploads_id'] }}">
+  <input id="restore_indexes" name="indexes" type="hidden"  value="">
+  <div class="col-md-3">
+    <button type="submit" class="btn btn-danger">Continue</button>
+  </div>
+  <div class="col-md-2">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+  </div>
+</form>

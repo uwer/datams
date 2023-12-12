@@ -1,0 +1,118 @@
+{% set title = ('Files', None, None)%}
+{% set button = {'id': 'fileAddButton', 'class': 'btn btn-success btn-md', 'label': 'ADD FILES', 'target': 'fileAddModal', 'modal_target': True} %}
+
+{% extends "root.html" %}
+
+{% block title %}
+    Files
+{% endblock %}
+
+{% block table %}
+    {{ components.table('fileTable', data['files']) }}
+{% endblock %}
+
+{% block modal %}
+    {{ components.modal('fileAddModal', 'Add Files', file.add(), size='xl') }}
+{% endblock %}
+
+{% block scripts %}
+{% set server = url_for('file.datatable_request') %}
+{{ scripts.format_table('fileTable', dom="flipt", paging=True, pagelength=25, serverside=server) }}
+{{ scripts.set_form_options() }}
+<script type="application/javascript">
+Dropzone.autoDiscover = false;
+var myDropzone = new Dropzone("div#fileDropzone", {
+    url: "{{ url_for('file.upload') }}",
+    parallelUploads: 2,
+    chunking: true,
+    forceChunking: true,
+    chunkSize: 2000000,
+    maxFilesize: 2048,
+    paramName: "file",
+    createImageThumbnails: true,
+    addRemoveLinks: true,
+  
+    init: function () {
+    var _this = this;
+      $('button#cancelButton').click(function() {_this.removeAllFiles(true)});
+    },
+    
+    processing: function () {
+      $('button#submitButton').prop('disabled', true);
+    },
+    
+    success: function (file, response) {
+      $('button#submitButton').prop('disabled', false);
+    },
+});
+
+$('button#submitButton').click(function() {
+  console.log(myDropzone.files);
+  let files = [];
+  for (let i=0; i<myDropzone.files.length; i++) {
+    console.log(myDropzone.files[i]);
+    console.log(myDropzone.files[i].name);
+    files.push(myDropzone.files[i].name);
+  }
+  $('input#files').prop('value', files.join());
+});
+
+//let submitButton = document.getElementById("submitButton");
+
+/*Dropzone.options.dfileDropzone = {
+    url: "{{ url_for('file.upload') }}",
+    parallelUploads: 2,
+    chunking: true,
+    forceChunking: true,
+    chunkSize: 2000000,
+    maxFilesize: 2048,
+    paramName: "file",
+    createImageThumbnails: true,
+    addRemoveLinks: true,
+};
+*/
+/*Dropzone.options.dfileDropzone = {
+    url: "{{ url_for('file.upload') }}",
+    method: "post",
+    withCredentials: false,
+    timeout: null,
+    parallelUploads: 2,
+    uploadMultiple: false,
+    chunking: false,
+    forceChunking: false,
+    chunkSize: 1000000,
+    parallelChunkUploads: false,
+    retryChunks: false,
+    retryChunksLimit: 3,
+    maxFilesize: 2048,
+    paramName: "file",
+    createImageThumbnails: true,
+    maxThumbnailFilesize: 10,
+    thumbnailWidth: 120,
+    thumbnailHeight: 120,
+    thumbnailMethod: "crop",
+    resizeWidth: null,
+    resizeHeight: null,
+    resizeMimeType: null,
+    resizeQuality: 0.8,
+    resizeMethod: "contain",
+    filesizeBase: 1000,
+    maxFiles: null,
+    headers: null,
+    clickable: true,
+    ignoreHiddenFiles: true,
+    acceptedFiles: null,
+    acceptedMimeTypes: null,
+    autoProcessQueue: true,
+    autoQueue: true,
+    addRemoveLinks: true,
+    previewsContainer: null,
+    disablePreviews: false,
+    hiddenInputContainer: "body",
+    capture: null,
+    renameFilename: null,
+    renameFile: null,
+    forceFallback: false
+};*/
+</script>
+{% endblock %}

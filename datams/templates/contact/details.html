@@ -18,10 +18,17 @@
   </div>
 </div>
 <hr>
-<h2>Assigned Deployments:</h2>
-{{ components.table('deploymentsTable', data['deployments']) }}
+<div class='float-start w-50 pe-5'>
+  <h2>Organization</h2>
+  {{ components.table('organizationTable', data['organization']) }}
+</div>
+<div class='float-start w-50'>
+  <h2>Assigned Deployments:</h2>
+  {{ components.table('deploymentsTable', data['deployments']) }}
+</div>
 {% endblock %}
 
 {% block scripts %}
     {{ scripts.format_table('deploymentsTable', header=False) }}
+    {{ scripts.format_table('organizationTable', header=False) }}
 {% endblock %}

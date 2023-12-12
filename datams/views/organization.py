@@ -3,7 +3,6 @@ from flask_login import login_required
 from datams.db.views import (organization_root, organization_details, organization_edit,
                              organization_add, organization_delete)
 
-
 bp = Blueprint('organization', __name__, url_prefix='/organization')
 
 
@@ -27,7 +26,7 @@ def edit(oid: int):
     data = organization_edit(oid, request)
     if request.method == 'GET' and data:
         return render_template('organization/edit.html', data=data)
-    elif request == 'POST':
+    elif request.method == 'POST':
         return redirect(url_for('organization.edit', oid=oid))
     else:
         return redirect(url_for('organization.root'))

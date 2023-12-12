@@ -3,7 +3,7 @@ from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import DeclarativeBase, Mapped
 from sqlalchemy.orm import mapped_column, relationship, validates
 from flask_login import UserMixin
-
+from datams.db.utils import connect_and_return_engine
 
 FILE_LEVELS = ['organization', 'deployment', 'mooring_equipment', 'unowned']
 
@@ -83,6 +83,24 @@ class Deployment(Base):
     )
 
 
+class DeletedFile(Base):
+    __tablename__ = 'DeletedFile'
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    original_id: Mapped[int]
+    ftype: Mapped[str]
+    organization_id: Mapped[Optional[int]]
+    deployment_id: Mapped[Optional[int]]
+    mooring_equipment_id: Mapped[Optional[int]]
+
+    path: Mapped[str]
+    name: Mapped[Optional[str]]
+    description: Mapped[Optional[str]]
+    uploaded: Mapped[int]
+    deleted: Mapped[int]
+    comments: Mapped[Optional[str]]
+
+
 class DeploymentContact(Base):
     __tablename__ = 'DeploymentContact'
 
@@ -121,6 +139,7 @@ class File(Base):
     )
 
     path: Mapped[str]
+    name: Mapped[Optional[str]]
     description: Mapped[str]
     uploaded: Mapped[int]
     comments: Mapped[Optional[str]]
@@ -134,7 +153,7 @@ class Equipment(Base):
         ForeignKey('Organization.id', ondelete='SET NULL'), nullable=True
     )
 
-    serial_number: Mapped[str]
+    serial_number: Mapped[str] = mapped_column(unique=True)
     item: Mapped[str]
     status: Mapped[str]
     make: Mapped[Optional[str]]
@@ -209,7 +228,25 @@ class Organization(Base):
 class User(Base, UserMixin):
     __tablename__ = 'User'
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    username: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     password: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[int]  # 0 is admin, 1 is editor, 2 is viewer
+    password_expired: Mapped[int]  # 0 is no, anything else is yes
     reset_key: Mapped[Optional[str]]
+
+
+def wipe_db(app_config):
+    engine = connect_and_return_engine(app_config)
+    Base.metadata.drop_all(engine)
+
+
+def initialize_db(app_config):
+    engine = connect_and_return_engine(app_config)
+    Base.metadata.drop_all(engine)
+    Base.metadata.create_all(engine)
+
+
+def sync_table_models(app_config):
+    engine = connect_and_return_engine(app_config)
+    Base.metadata.create_all(engine)

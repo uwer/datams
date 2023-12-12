@@ -3,7 +3,7 @@ from sqlalchemy import insert, update, delete
 from datams.db.core import query_all
 from datams.db.tables import (Contact, Deployment, File, Mooring, Organization,
                               Equipment, DeploymentOrganization, DeploymentContact,
-                              MooringEquipment)
+                              MooringEquipment, User)
 
 
 def update_query(table, values, **kwargs):
@@ -14,17 +14,23 @@ def update_query(table, values, **kwargs):
     elif table == 'Equipment':
         update_equipment(kwargs['equipment_id'], values)
     elif table == 'File':
-        update_file(kwargs['file_id'], values)
+        update_files(kwargs['file_id'], values)
     elif table == 'Mooring':
         update_mooring(kwargs['mooring_id'], values)
     elif table == 'Organization':
         update_organization(kwargs['organization_id'], values)
+    elif table == 'User':
+        update_user(kwargs['user_id'], values)
     else:
         raise NotImplementedError
 
 
 def update_contact(contact_id, values: Dict[str, Any]):
     query_all([update(Contact).values(**values).where(Contact.id == contact_id)])
+
+
+def update_user(user_id, values: Dict[str, Any]):
+    query_all([update(User).values(**values).where(User.id == user_id)])
 
 
 def update_deployment(deployment_id, values: Dict[str, Any]):
@@ -53,9 +59,13 @@ def update_deployment(deployment_id, values: Dict[str, Any]):
     query_all(
         [update(Deployment).values(**values).where(Deployment.id == deployment_id)])
 
+# def update_file(file_id, values):
+#     query_all([update(File).values(**values).where(File.id == file_id)])
 
-def update_file(file_id, values):
-    query_all([update(File).values(**values).where(File.id == file_id)])
+
+def update_files(values):
+    indexes = values.pop('indexes')
+    query_all([update(File).values(**values).where(File.id.in_(indexes))])
 
 
 def update_equipment(equipment_id, values: Dict[str, Any]):

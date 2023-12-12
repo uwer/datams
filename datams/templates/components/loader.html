@@ -3,6 +3,8 @@ Parameters
 ==========
 
 id: str
+center: bool True
+hidden: bool False
 #}
 
-<div id="{{ id }}" class="loader center"></div>
+<div id="{{ id }}" class="loader {% if center %}center{% endif %} {% if hidden %}d-none{% endif %}"></div>

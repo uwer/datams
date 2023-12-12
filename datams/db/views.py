@@ -1,17 +1,12 @@
+import datetime as dt
 import flask
 import pandas as pd
 from functools import partial
-from datams.utils import move_pending_files
-from datams.celery import load_cache
 from datams.db.requests import parse_request
 from datams.db.utils import (mooring_add_equipment_html, mooring_files_add_section,
                              map_properties)
 from datams.db.queries import select_query, insert_query, update_query, delete_query
-
-import logging
-logging.basicConfig()
-log = logging.getLogger()
-log.setLevel(logging.DEBUG)
+from werkzeug.security import check_password_hash, generate_password_hash
 
 """
 This module acts as a layer between the database and the web application views, 
@@ -48,11 +43,16 @@ def fetch_data(requested_data, **kwargs):
         ofiles=partial(select_query, data='ofile', **kwargs),
         dfiles=partial(select_query, data='dfile', **kwargs),
         mfiles=partial(select_query, data='mfile', **kwargs),
+        pending_files=partial(select_query, data='pending_files', **kwargs),
+        discovered_files=partial(select_query, data='discovered_files', **kwargs),
+        deleted_files=partial(select_query, data='deleted_files', **kwargs),
         equipment=partial(select_query, data='equipment', **kwargs),
         moorings=partial(select_query, data='mooring', **kwargs),
         mooring=partial(select_query, data='mooring', **kwargs),
         organizations=partial(select_query, data='organization', **kwargs),
         organization=partial(select_query, data='organization', **kwargs),
+        user=partial(select_query, data='user', **kwargs),
+        users=partial(select_query, data='user', **kwargs),
         all_countries=partial(select_query, data='country'),
         all_contacts=partial(select_query, data='contact'),
         all_deployments=partial(select_query, data='deployment'),
@@ -88,7 +88,7 @@ def contact_root():
 
 def contact_details(cid):
     kwargs = dict(view='contact.details', contact_id=cid)
-    data_to_fetch = ['contact', 'deployments']
+    data_to_fetch = ['contact', 'deployments', 'organization']
     return fetch_data(data_to_fetch, **kwargs)
 
 
@@ -150,22 +150,46 @@ def deployment_edit(did: int, request: flask.Request):
     else:
         values = parse_request(request, table='Deployment', rtype='edit')
         update_query(table='Deployment', values=values, deployment_id=did)
-        load_cache()
+        # load_processed_files()
 
 
 def deployment_delete(did):
     delete_query(table='Deployment', deployment_id=did)
-    load_cache()
+    # load_processed_files()
 
 
+# def file_root_orig():
+#     kwargs = dict(view='file.root')
+#     data_to_fetch = ['all_organizations', 'all_deployments', 'all_moorings',
+#                      'all_equipment', 'all_levels', 'all_descriptions']
+#     data = fetch_data(data_to_fetch, **kwargs)
+#     # don't actually pull files (it's too slow)
+#     data['files'] = pd.DataFrame(columns=['level', 'owner', 'description', 'filename',
+#                                           'uploaded', 'url'])
+#     return data
+
+# TODO: rename files to processed_files
 def file_root():
     kwargs = dict(view='file.root')
     data_to_fetch = ['all_organizations', 'all_deployments', 'all_moorings',
                      'all_equipment', 'all_levels', 'all_descriptions']
     data = fetch_data(data_to_fetch, **kwargs)
-    # don't actually pull files (it's too slow)
-    data['files'] = pd.DataFrame(columns=['level', 'owner', 'description', 'filename',
-                                          'uploaded', 'url'])
+    data['timestamp_str'] = f"{dt.datetime.now().timestamp():10.6f}".replace('.', '')
+
+    # don't actually pull any file list (it's too slow), instead create empty pandas
+    # DataFrame placeholders
+    data['processed_files'] = pd.DataFrame(columns=[
+        'filename', 'level', 'owner', 'description', 'uploaded', 'url', 'filepath'
+    ])
+    data['pending_files'] = pd.DataFrame(columns=[
+        'filename', 'uploaded', 'uploaded_by', 'filepath'
+    ])
+    data['discovered_files'] = pd.DataFrame(columns=[
+        'filename', 'last_modified', 'filepath'
+    ])
+    data['deleted_files'] = pd.DataFrame(columns=[
+        'filename', 'deleted', 'deleted_by', 'originally_uploaded_by', 'filepath'
+    ])
     return data
 
 
@@ -174,34 +198,34 @@ def file_details(fid):
     return fetch_data(['file'], **kwargs)
 
 
-def file_add(request: flask.Request, session: flask.session):
-    values = parse_request(request, table='File', rtype='add')
-    insert_query(table='File', values=values)
-    move_pending_files(session)
-    load_cache()
+# def file_add(request: flask.Request, session: flask.session):
+#     values = parse_request(request, table='File', rtype='add')
+#     insert_query(table='File', values=values)
+#     # move_pending_files(session)
+#     load_pending_files()
 
 
-def file_edit(fid, request: flask.Request):
-    if request.method == 'GET':
-        kwargs = dict(view='file.edit', file_id=fid)
-        data_to_fetch = ['file', 'all_organizations', 'all_deployments', 'all_moorings',
-                         'all_equipment', 'all_levels', 'all_descriptions']
-        return fetch_data(data_to_fetch, **kwargs)
-    else:
-        values = parse_request(request, table='File', rtype='edit')
-        update_query(table='File', values=values, file_id=fid)
-        load_cache()
+# def file_edit(fid, request: flask.Request):
+#     if request.method == 'GET':
+#         kwargs = dict(view='file.edit', file_id=fid)
+#         data_to_fetch = ['file', 'all_organizations', 'all_deployments', 'all_moorings',
+#                          'all_equipment', 'all_levels', 'all_descriptions']
+#         return fetch_data(data_to_fetch, **kwargs)
+#     else:
+#         values = parse_request(request, table='File', rtype='edit')
+#         update_query(table='File', values=values, file_id=fid)
+#         # load_processed_files()
 
 
-def file_delete(fid):
-    delete_query(table='File', file_id=fid)
-    load_cache()
+# def file_delete(fid):
+#     delete_query(table='File', file_id=fid)
+    # load_processed_files()
 
 
-def file_download(fid):
-    kwargs = dict(view='file.download', file_id=fid)
-    data_to_fetch = ['file']
-    return fetch_data(data_to_fetch, **kwargs)
+# def file_download(fid):
+#     kwargs = dict(view='file.download', file_id=fid)
+#     data_to_fetch = ['file']
+#     return fetch_data(data_to_fetch, **kwargs)
 
 
 def equipment_root():
@@ -212,7 +236,7 @@ def equipment_root():
 
 def equipment_details(eid):
     kwargs = dict(view='equipment.details', equipment_id=eid)
-    data_to_fetch = ['equipment', 'deployments']
+    data_to_fetch = ['equipment', 'deployments', 'organization']
     return fetch_data(data_to_fetch, **kwargs)
 
 
@@ -224,18 +248,18 @@ def equipment_add(request: flask.Request):
 def equipment_edit(eid, request: flask.Request):
     if request.method == 'GET':
         kwargs = dict(view='equipment.edit', equipment_id=eid)
-        data_to_fetch = ['equipment', 'deployments', 'all_deployments', 'all_organizations',
-                          'all_items', 'all_status']
+        data_to_fetch = ['equipment', 'deployments', 'all_deployments',
+                         'all_organizations', 'all_items', 'all_status']
         return fetch_data(data_to_fetch, **kwargs)
     else:
         values = parse_request(request, table='Equipment', rtype='edit')
         update_query(table='Equipment', values=values, equipment_id=eid)
-        load_cache()
+        # load_processed_files()
 
 
 def equipment_delete(eid):
     delete_query(table='Equipment', equipment_id=eid)
-    load_cache()
+    # load_processed_files()
 
 
 def mooring_root():
@@ -264,12 +288,12 @@ def mooring_edit(mid, request: flask.Request):
     else:
         values = parse_request(request, table='Mooring', rtype='edit')
         update_query(table='Mooring', values=values, mooring_id=mid)
-        load_cache()
+        # load_processed_files()
 
 
 def mooring_delete(mid):
     delete_query(table='Mooring', mooring_id=mid)
-    load_cache()
+    # load_processed_files()
 
 
 def organization_root():
@@ -301,9 +325,28 @@ def organization_edit(oid: int, request: flask.request):
     else:
         values = parse_request(request, table='Organization', rtype='edit')
         update_query(table='Organization', values=values, organization_id=oid)
-        load_cache()
+        # load_processed_files()
 
 
 def organization_delete(oid):
     delete_query(table='Organization', organization_id=oid)
-    load_cache()
+    # load_processed_files()
+
+
+def user_password_reset(request: flask.Request):
+    kwargs = parse_request(request, 'User', rtype='password_reset')
+    user = fetch_data(['user'], **kwargs)['user']
+    if user is None:
+        raise RuntimeError(f"Error resetting password.  ")
+    if not check_password_hash(user.password, kwargs['current_password']):
+        raise RuntimeError(f"Incorrect password.  ")
+    else:
+        values = dict(password=generate_password_hash(kwargs['new_password']),
+                      password_expired=0)
+        update_query(table='User', values=values, user_id=user.id)
+
+
+def admin_options():
+    kwargs = dict(view='admin.options')
+    data_to_fetch = ['users']
+    return fetch_data(data_to_fetch, **kwargs)

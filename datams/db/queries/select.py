@@ -1,18 +1,24 @@
+import os
+import datetime as dt
+from pathlib import Path
 import pandas as pd
 from sqlalchemy import select, text, func, literal_column, String
 
-from datams.utils import MENU_CONFIG, TIMEZONES
+from datams.utils import (MENU_CONFIG, TIMEZONES, DISCOVERY_DIRECTORY,
+                          PENDING_DIRECTORY)
 from datams.db.core import query_df, query_first_df, query_first
 from datams.db.tables import (
     Contact, Country, Deployment, DeploymentContact, DeploymentOrganization, File,
-    Equipment, Mooring, MooringEquipment, Organization, User, FILE_LEVELS
+    Equipment, Mooring, MooringEquipment, Organization, User, DeletedFile, FILE_LEVELS
 )
 from datams.db.formatting import (
     contact_format, deployment_format, organization_format, mooring_format,
-    equipment_format, file_format
+    equipment_format, file_format, deleted_file_format, user_format
 )
 
 # TODO: Add sorting to here or data_for_views where appropriate
+# TODO: Rename occurances of file/files (that correspond to processed files) to
+#       processed_file/processed_files respectively
 """
 This file act as the layer immediately interacting with the database, currently it is 
 doing formatting and defining what columns it needs from the database, but this is a 
@@ -37,12 +43,22 @@ def select_query(data, **kwargs):
         return select_dfiles(**kwargs)
     elif data == 'mfile':
         return select_mfiles(**kwargs)
+    elif data == 'processed_files':
+        return select_processed_files()
+    elif data == 'pending_files':
+        return select_pending_files()
+    elif data == 'discovered_files':
+        return select_discovered_files()
+    elif data == 'deleted_files':
+        return select_deleted_files()
     elif data == 'equipment':
         return select_equipment(**kwargs)
     elif data == 'mooring':
         return select_moorings(**kwargs)
     elif data == 'organization':
         return select_organizations(**kwargs)
+    elif data == 'user':
+        return select_user(**kwargs)
     elif data == 'country':
         return select_countries()
     elif data == 'contact_positions':
@@ -81,6 +97,85 @@ def _get_file_level(file_id):
 def next_deployment_id():
     stmt = text(f'''SELECT last_value FROM "Deployment_id_seq";''')
     return int(query_first_df(stmt)['last_value'])
+
+
+def select_processed_files():
+    df = pd.concat(
+        [select_ufiles(), select_ofiles(), select_dfiles(), select_mfiles()]
+    ).reset_index(drop=True)
+    df = df[['id', 'level', 'filename', 'owner', 'description', 'uploaded',
+             'url', 'path']]
+    return df.rename(columns={'path': 'filepath'})
+
+
+def select_pending_files():
+    deleted = list(select_deleted_files()['path'].apply(
+        lambda x: x if x is None else os.path.realpath(x))
+    )
+    t = [f for f in Path(PENDING_DIRECTORY).rglob('*')
+         if f.is_file() and not os.path.basename(str(f)).startswith('.temp')]
+    filepaths, filenames, uploaded, uploaded_bys = [], [], [], []
+    for i in range(len(t)):
+        # TODO: Consider using a regular expression to validate the filename
+        c_filepath, f = str(t[i]), os.path.basename(str(t[i]))
+        if os.path.realpath(c_filepath) not in deleted:
+            try:
+                c_filename = '.'.join(f.split('.')[2:])
+                c_uploaded = dt.datetime.fromtimestamp(
+                    float(f"{f.split('.')[1][:-6]}.{f.split('.')[1][-6:]}")
+                ).strftime('%Y-%m-%d %H:%M:%S')
+                c_uploaded_by = f.split('.')[0]
+            except Exception as error:  # TODO: Use more specific errors i.e IndexError,
+                                        #       RuntimeError, TypeError, etc.
+                c_uploaded = c_uploaded_by = None
+            filepaths.append(c_filepath)
+            filenames.append(c_filename)
+            uploaded.append(c_uploaded)
+            uploaded_bys.append(c_uploaded_by)
+    return pd.DataFrame({'id': [i for i in range(len(filepaths))],
+                         'filepath': filepaths, 'filename': filenames,
+                         'uploaded': uploaded, 'uploaded_by': uploaded_bys})
+
+
+def select_discovered_files():
+    """
+    p = pathlib.Path('/First/Second/Third/Fourth/Fifth')
+    p.parts[2:]
+    ('Second', 'Third', 'Fourth', 'Fifth')
+    pathlib.Path(*p.parts[2:])
+    PosixPath('Second/Third/Fourth/Fifth')
+
+    """
+    touched_files = []
+    normal_files = set([
+        str(f) if not str(f).endswith('.touch') else touched_files.append(str(f)[:-6])
+        for f in Path(DISCOVERY_DIRECTORY).rglob('*')
+        if f.is_file()
+    ])
+    if None in normal_files:
+        normal_files.remove(None)
+    filepaths = sorted(list(normal_files.difference(touched_files)))
+    # log.debug(len(Path(DISCOVERY_DIRECTORY).parts))
+    filenames = [
+        str(Path(*Path(f).parts[len(Path(DISCOVERY_DIRECTORY).parts):]))
+        for f in filepaths
+    ]
+    last_modifies = [
+        dt.datetime.fromtimestamp(os.path.getmtime(f)).strftime('%Y-%m-%d %H:%M:%S')
+        for f in filepaths
+    ]
+    return pd.DataFrame({'id': [i for i in range(len(filepaths))],
+                         'filepath': filepaths, 'filename': filenames,
+                         'last_modified': last_modifies})
+
+
+def select_deleted_files():
+    stmt = select(DeletedFile.id, DeletedFile.original_id, DeletedFile.ftype,
+                  DeletedFile.description, DeletedFile.path, DeletedFile.uploaded,
+                  DeletedFile.comments, DeletedFile.name, DeletedFile.deleted)
+    df = deleted_file_format(query_df(stmt), compute=['filename'])
+    # log.debug(df.columns)
+    return df
 
 
 def select_mooring_equipment_id(mooring_id: int, equipment_id: int):
@@ -122,13 +217,21 @@ def select_countries():
 
 def select_user(view, **kwargs):
     query_def = {
-        'load_user': User.id == kwargs.get('user_id'),
-        'authenticate_user': User.email == kwargs.get('user_email'),
+        'user.by_id': User.id == kwargs.get('uid'),
+        'user.by_email': User.email == kwargs.get('email'),
+        'user.by_username': User.username == kwargs.get('username'),
+        'admin.options': (['id', 'username', 'email', 'role'], None),
     }
-    stmt = select(User)
-    where = query_def[view]
-    stmt = stmt if where is None else stmt.where(where)
-    return query_first(stmt)
+    if view == 'admin.options':
+        stmt = select(User.id, User.username, User.email, User.role)
+        c, w = query_def[view]
+        stmt = stmt if w is None else stmt.where(w)
+        return user_format(query_df(stmt))[c]
+    else:
+        stmt = select(User)
+        where = query_def[view]
+        stmt = stmt if where is None else stmt.where(where)
+        return query_first(stmt)
 
 
 def select_contacts(view=None, **kwargs):
@@ -178,8 +281,12 @@ def select_organizations(view=None, **kwargs):
         # 'view': (columns, where)
         'None':
             (['id', 'name'], None),
+        'contact.details':
+            (['name', 'url'], Contact.id == kwargs.get('contact_id')),
         'deployment.details':
             (['name', 'url'], Deployment.id == kwargs.get('deployment_id')),
+        'equipment.details':
+            (['name', 'url'], Equipment.id == kwargs.get('equipment_id')),
         'deployment.edit':
             (['id'], Deployment.id == kwargs.get('deployment_id')),
         'mooring.details':
@@ -198,6 +305,8 @@ def select_organizations(view=None, **kwargs):
                Organization.country_id, Organization.comments,
                Country.name.label('country'))
         .join(Country)
+        .outerjoin_from(Organization, Equipment)
+        .outerjoin_from(Organization, Contact)
         .outerjoin_from(Organization, DeploymentOrganization)
         .outerjoin_from(DeploymentOrganization, Deployment)
         .outerjoin_from(Deployment, Mooring)
@@ -228,14 +337,14 @@ def select_deployments(view=None, **kwargs):
               'organizations', 'country_id', 'oids'],
              Deployment.id == kwargs.get('deployment_id')),
         'equipment.details':
-            (['name', 'organizations', 'url'],
+            (['name', 'url'],
              Equipment.id == kwargs.get('equipment_id')),
         'equipment.edit':
             (['id'], Equipment.id == kwargs.get('equipment_id')),
         'mooring.details':
             (['name', 'url'], Mooring.id == kwargs.get('mooring_id')),
         'organization.details':
-            (['location', 'date', 'organizations', 'url'],
+            (['location', 'date', 'url'],
              Organization.id == kwargs.get('organization_id')),
         'organization.edit':
             (['id'], Organization.id == kwargs.get('organization_id')),
@@ -331,7 +440,7 @@ def select_equipment(view=None, **kwargs):
             (['id', 'item', 'serial_number', 'mids'], None),
         'deployment.details':
             (['id', 'serial_number', 'item', 'make', 'model', 'comments', 'url',
-              'html'], Deployment.id == kwargs.get('deployment_id')),
+              'html', 'name'], Deployment.id == kwargs.get('deployment_id')),
         'equipment.root':
             (['item', 'make_&_model', 'serial_number', 'status', 'url'], None),
         'equipment.details':
@@ -376,13 +485,14 @@ def select_ufiles(view=None, **kwargs):
         # 'view': (columns, where)
         'None':
             (['id', 'level', 'owner', 'description', 'filename', 'uploaded', 'comments',
-              'path', 'url', 'organization_id', 'deployment_id', 'mooring_id',
+              'path', 'url', 'organization_id', 'deployment_id', 'mooring_id', 'name',
               'equipment_id', 'mooring_equipment_id'], fid),
     }
     stmt = (
         select(
-            File.id, File.description, File.path, File.uploaded, File.comments,
-            File.organization_id, File.deployment_id, File.mooring_equipment_id)
+            File.id, File.description, File.path, File.name, File.uploaded,
+            File.comments, File.organization_id, File.deployment_id,
+            File.mooring_equipment_id)
         .where(File.organization_id == None)
         .where(File.deployment_id == None)
         .where(File.mooring_equipment_id == None)
@@ -405,16 +515,16 @@ def select_ofiles(view=None, **kwargs):
               'path', 'url', 'organization_id', 'deployment_id', 'mooring_id',
               'equipment_id', 'mooring_equipment_id'], fid),
         'organization.details':
-            (['description', 'filename', 'uploaded', 'url'],
+            (['filename', 'uploaded', 'url'],
              Organization.id == kwargs.get('organization_id')),
         'organization.edit':
             (['id'], Organization.id == kwargs.get('organization_id')),
     }
     stmt = (
         select(
-            File.id, File.description, File.path, File.uploaded, File.comments,
-            File.organization_id, File.deployment_id, File.mooring_equipment_id,
-            Organization.abbreviation.label('org'))
+            File.id, File.description, File.path, File.name, File.uploaded,
+            File.comments, File.organization_id, File.deployment_id,
+            File.mooring_equipment_id, Organization.abbreviation.label('org'))
         .join(Organization)
     )
     to_compute = ['owner', 'filename', 'url', 'level']
@@ -432,16 +542,16 @@ def select_dfiles(view=None, **kwargs):
         # 'view': (columns, where)
         'None':
             (['id', 'level', 'owner', 'description', 'filename', 'uploaded', 'comments',
-              'path', 'url', 'organization_id', 'deployment_id', 'mooring_id',
+              'path', 'url', 'organization_id', 'deployment_id', 'mooring_id', 'name',
               'equipment_id', 'mooring_equipment_id'], fid),
         'deployment.details':
-            (['description', 'filename', 'uploaded', 'url'],
+            (['filename', 'uploaded', 'url'],
              Deployment.id == kwargs.get('deployment_id')),
     }
     stmt = (
         select(
             File.id, File.description, File.path, File.uploaded, File.comments,
-            File.deployment_id, File.mooring_equipment_id,
+            File.deployment_id, File.mooring_equipment_id, File.name,
             Deployment.region.label('dep_reg'), Country.name.label('dep_cou'),
             func.min(Mooring.deployed).label('dep_dat'),
             func.min(Organization.id.distinct()).label('organization_id'),
@@ -469,19 +579,19 @@ def select_mfiles(view=None, **kwargs):
         # 'view': (columns, where)
         'None':
             (['id', 'level', 'owner', 'description', 'filename', 'uploaded', 'comments',
-              'path', 'url', 'organization_id', 'deployment_id', 'mooring_id',
+              'path', 'url', 'organization_id', 'deployment_id', 'mooring_id', 'name',
               'equipment_id', 'mooring_equipment_id'], fid),
         'deployment.details':
             (['description', 'filename', 'uploaded', 'url', 'mooring_id'],
              Deployment.id == kwargs.get('deployment_id')),
         'mooring.details':
-            (['description', 'filename', 'uploaded', 'url'],
+            (['filename', 'description', 'uploaded', 'url'],
              Mooring.id == kwargs.get('mooring_id')),
     }
     stmt = (
         select(
             File.id, File.description, File.path, File.uploaded, File.comments,
-            File.mooring_equipment_id, Deployment.id.label('deployment_id'),
+            File.name, File.mooring_equipment_id, Deployment.id.label('deployment_id'),
             func.min(Organization.id.distinct()).label('organization_id'),
             Mooring.id.label('mooring_id'), Equipment.id.label('equipment_id'),
             func.string_agg(Organization.abbreviation.distinct(),
@@ -516,7 +626,9 @@ def select_files(view=None, **kwargs):
         return df[['id', 'level', 'owner', 'description', 'filename', 'uploaded',
                    'url']]
     elif view == 'file.download':
-        df = query_df(select(File.path).where(File.id == kwargs.get('file_id')))
+        df = query_df(select(File.path, File.name).where(
+            File.id == kwargs.get('file_id'))
+        )
         df = file_format(df, compute=['filename'])
         return df[['path', 'filename']]
     elif view in ('file.details', 'file.edit'):

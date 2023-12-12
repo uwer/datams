@@ -1,6 +1,6 @@
 # datams
 
-## Installation (Ubuntu IOS)
+## Installation (Ubuntu OS)
 
 ---
 *NOTE:*
@@ -63,7 +63,7 @@ If this is not the correct location then it can be found using
 
 ### 6. Create the new database
 ```bash
-    sudo -u pstgres createdb datams
+    sudo -u postgres createdb datams
 ```
 
 ### 7. Log into postgres database as postgres user and create datams user and grant them priviledges on the new database
@@ -126,7 +126,7 @@ If this is not the correct location then it can be found using
   sudo chmod -R o-rwx /usr/local/src/datams/
   sudo mkdir -p /var/lib/datams/uploads/submitted
   sudo mkdir -p /var/lib/datams/uploads/pending
-  sudo chmod -R 770 /var/datams
+  sudo chmod -R 770 /var/lib/datams
 ```
 
 ### 16. start services and check their status to ensure they started correctly
@@ -162,6 +162,7 @@ If this is not the correct location then it can be found using
    - catch database errors in view methods that call them and flash these to the user.  
    - cronjob to dump database daily in-case of catastrophic loss
    - implement logging in flask application
+   - add functionality to add/remove files from organization, deployment, and mooring edit views.  
    - have failed transactions rollback by executing them all in a block instead of separately
    - a set of tests suite
    - Fix the error involving letter case of uploads filenames (could force lowercase)
@@ -189,3 +190,16 @@ If this is not the correct location then it can be found using
    - implment viewer priviledges by creating custom decorating similar to the @login_required decorated
      that checks if user.role < 2.  Also should disable or hide the buttons to access these areas from this type of user
    - table to log user actions to see how system is being used
+
+$ celery --app make_celery worker --loglevel=DEBUG --pool=solo
+$ celery --app make_celery beat
+$ flask --app datams run --debug
+
+$ gunicorn --bind 127.0.0.1:5000 wsgi:app
+
+$ flask --app datams init-db        # datams-init-db
+$ flask --app datams wipe-db        # datams-wipe-db
+$ flask --app datams create-user    # datams-create-user
+$ flask --app datams delete-user    # datams-delete-user
+$ flask --app datams resolve-files  # datams-resolve-files
+

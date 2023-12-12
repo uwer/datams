@@ -25,22 +25,21 @@
     <label for="recovered" class="form-label">Recovered</label>
     <input type="datetime-local" class="form-control" name="recovered" id="recovered">
   </div>
-  
   <div class="col-md-3">
     <label for="latitude" class="form-label">Latitude (d.dddd)</label>
-    <input type="number" step="0.0001" min="-90.0000", max="90.0000" class="form-control" name="latitude" id="latitude" required>
+    <input type="number" step="0.0001" min="-90.0000", max="90.0000" class="form-control" name="latitude" id="latitude" onfocusout="roundValue('latitude', 4)" required>
   </div>
   <div class="col-md-3">
     <label for="longitude" class="form-label">Longitude (d.dddd)</label>
-    <input type="number" step="0.0001" min="-180.0000", max="180.0000" class="form-control" name="longitude" id="longitude" required>
+    <input type="number" step="0.0001" min="-180.0000", max="180.0000" class="form-control" name="longitude" id="longitude" onfocusout="roundValue('longitude', 4)" required>
   </div>
   <div class="col-md-3">
     <label for="seafloor_depth" class="form-label">Ocean Depth (m)</label>
-    <input type="number" step="0.001" min="0.000", max="12000.000"class="form-control" name="seafloor_depth" id="seafloor_depth" required>
+    <input type="number" step="0.001" min="0.000", max="12000.000"class="form-control" name="seafloor_depth" id="seafloor_depth" onfocusout="roundValue('seafloor_depth', 3)" required>
   </div>
   <div class="col-md-3">
     <label for="line_length" class="form-label">Line Length (m)</label>
-    <input type="number" step="0.001" class="form-control" name="line_length" id="line_length" required>
+    <input type="number" step="0.001" class="form-control" name="line_length" id="line_length" onfocusout="roundValue('line_length', 3)" required>
   </div>
   <div class="col-md-12">
     <label for="comments" class="form-label">Comments</label>
@@ -53,3 +52,9 @@
     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
   </div>
 </form>
+<script>
+function roundValue(eid, decimal_places){
+  element = document.getElementById(eid);
+  element.value = Math.round(element.value * 10**decimal_places) / 10**decimal_places;
+}
+</script>

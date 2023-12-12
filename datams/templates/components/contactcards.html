@@ -6,7 +6,7 @@ TODO: Put the inline style into a stylesheet
 TODO: Implement dynamic sizing of both elements and fonts
 #}
 
-<div class='d-inline-block'> <!-- style="overflow-y: auto; height: 600px; background-color: blue;" -->
+<div class='d-inline-block w-100 h-100'> <!-- style="overflow-y: auto; height: 600px; background-color: blue;" -->
   <ul class="list-group list-group-horizontal">
   {% for _, row in df.iterrows() %}
     <li class="list-group-item border-0 p-2" style="width: {{ 100/gw }}%;">
@@ -49,4 +49,10 @@ TODO: Implement dynamic sizing of both elements and fonts
   <ul class="list-group list-group-horizontal">
     {% endif %}
   {% endfor %}
+  </ul>
+  {% if df.shape[0] == 0 %}
+  <div class="d-flex justify-content-center align-items-center w-100 h-25">
+    <p style="font-size: 1.5em; color: rgb(80,80,80); font-style: italic;">None</p>
+  </div>
+  {% endif %}
 </div>

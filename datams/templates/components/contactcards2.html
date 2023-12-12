@@ -1,0 +1,50 @@
+{#
+df - pd.DataFrame must have the following keys: 'name', 'position', 'url', 'phone', 'email', 'avatar'
+gw - int
+
+TODO: Put the inline style into a stylesheet
+TODO: Implement dynamic sizing of both elements and fonts
+#}
+
+<div class='d-inline-block w-100 h-100'> <!-- style="overflow-y: auto; height: 600px; background-color: blue;" -->
+  {% for _, row in df.iterrows() %}
+  <div class="card ms-2 float-start" style="width:150px;">
+    <div style="position: relative;">
+      <a href="{{ row['url'] }}" style="text-decoration: None; color: black;">
+        {% if pd.isna(row['avatar']) %}
+        <img src="{{ url_for('static', filename='/images/generic_avatar.png') }}" class="card-img-top" alt="...">
+        {% else %}
+        <img src="data:image/png;base64, {{ row['avatar'] }}" class="card-img-top" alt="...">
+        {% endif %}
+      </a>
+      {% if row['organization'] != '' %}
+      <div style="position: absolute; top: 0px; left: 3px; font-weight: bold; background-color: rgba(255,255,255,0.5); border-radius: 10px;">{{ row['organization'] }}</div>
+      {% endif %}
+    </div>
+    <div class="card-body">
+      <a href="{{ row['url'] }}" style="text-decoration: None; color: black;">
+        <h5 class="card-title" style="font-size: 0.75em;">{{ row['name'] }}</h5>
+        <p class="card-text" style="font-size: 0.60em;">{% if row['position'] != '' %}{{ row['position'] }}{% endif %}</p>
+      </a>
+      <a href="{{ row['url'] }}" style="text-decoration: None; color: black;">
+        <img src="{{ url_for('static', filename='/icons/person.svg') }}", height="12", width="12"/>
+      </a>
+      {% if row['phone'] != '' %}
+      <a href="tel:{{ row['phone'] }}" style="text-decoration: None; color: black;">
+        <img src="{{ url_for('static', filename='/icons/phone.svg') }}", height="12", width="12" />
+      </a>
+      {% endif %}
+      {% if row['email'] != '' %}
+      <a href="mailto:{{ row['email'] }}" style="text-decoration: None; color: black;">
+        <img src="{{ url_for('static', filename='/icons/envelope.svg') }}", height="12", width="12" />
+      </a>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+  {% if df.shape[0] == 0 %}
+  <div class="d-flex justify-content-center align-items-center w-100 h-25">
+    <p style="font-size: 1.5em; color: rgb(80,80,80); font-style: italic;">None</p>
+  </div>
+  {% endif %}
+</div>

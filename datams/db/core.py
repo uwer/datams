@@ -1,10 +1,10 @@
 import pandas as pd
-import click
 from flask import current_app, g
 from sqlalchemy.orm import Session
-
-from datams.db.utils import (conect_and_return_engine, initialize_db,
-                             create_upload_directories, result_to_df)
+from datams.utils import APP_CONFIG
+from datams.db.utils import (connect_and_return_engine, create_upload_directories,
+                             validate_discovery_directory)
+from datams.db.tables import sync_table_models
 
 
 def query(statement):
@@ -31,7 +31,11 @@ def query_df(statement):
     """
     return query results as a dataframe empty dataframe if None
     """
-    return result_to_df(query(statement))
+    engine = get_engine()
+    with Session(engine) as session:
+        result = session.execute(statement)
+        df = pd.DataFrame(result, columns=result.keys())
+    return df
 
 
 def query_all(statements: list) -> None:
@@ -62,29 +66,22 @@ def get_engine(app=None):
         else:
             return app.extensions['sqlalchemy_engine']
     except RuntimeError:
-        return conect_and_return_engine()
+        return connect_and_return_engine(APP_CONFIG)
 
 
-@click.command('init-db')
-def init_db_command():
-    """Clear the existing data and create new tables."""
-    r = input('\nWARNING: This action will reset the database tables removing any and '
-              'all stored values!  Do you want to continue? Y or [N]: ')
-    if r.lower() == 'y':
-        initialize_db()
-        click.echo('\nInitialized the database.')
-    else:
-        click.echo('\nInitialization aborted.')
-
+# create-user --admin
 
 def database_init_app(app):
     # create the upload directories
-    upload_directories = [v for k, v in app.config['UPLOADS'].items()
-                          if k in {'directory', 'pending_directory'}]
-    create_upload_directories(upload_directories)
+    create_upload_directories(app.config['DATA_FILES']['upload_directory'])
+
+    # validate the discovery directory
+    validate_discovery_directory(app.config['DATA_FILES']['upload_directory'])
 
     # create the engine to the database
-    app.extensions['sqlalchemy_engine'] = conect_and_return_engine()
+    app.extensions['sqlalchemy_engine'] = connect_and_return_engine(APP_CONFIG)
 
-    app.cli.add_command(init_db_command)  # register the init-db command
+    # ensure that the sqlalchemy orm models match the database
+    sync_table_models(APP_CONFIG)
+
     # TODO: app.teardown_appcontext(close_engine)?

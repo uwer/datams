@@ -13,29 +13,53 @@ from xml.etree import ElementTree
 import seaborn as sns
 import yaml
 
-import pandas as pd
-from werkzeug.utils import secure_filename
+from flask import current_app
 
-import logging
-logging.basicConfig()
-log = logging.getLogger()
-log.setLevel(logging.DEBUG)
+def expand_environmental_variables(d):
+    if issubclass(type(d), str):
+        return os.path.expandvars(d)
+    elif issubclass(type(d), dict):
+        d2 = dict()
+        for k, v in d.items():
+            d2[k] = expand_environmental_variables(v)
+        return d2
+    else:
+        return d
+
 
 DATAMS_CONFIG = "DATAMS_CONFIG"
 
 rootdir = os.path.dirname(os.path.realpath(__file__))
+
 conf_file = os.getenv(DATAMS_CONFIG,os.path.join(rootdir, "config.yml"))
+
+# with open(conf_file, "r") as conf_fp:
+#     config = yaml.safe_load(conf_fp)
+# with open(os.path.join(rootdir, "config.yml"), "r") as conf_fp:
+
 with open(conf_file, "r") as conf_fp:
     config = yaml.safe_load(conf_fp)
+    config = expand_environmental_variables(config)
+
+# TODO: Enforce these for certain things such as deployment, mooring, organization, user
+#       names.
+ALLOWED_CHARACTERS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
+                      'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+                      'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+                      'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+                      '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '_', '-']
 
 APP_CONFIG = config['app']
 MAP_CONFIG = config['map']
 MENU_CONFIG = config['menu']
 
-ALLOWED_UPLOAD_EXTENSIONS = APP_CONFIG['UPLOADS']['allowed_extensions']
-UPLOAD_FOLDER = APP_CONFIG['UPLOADS']['directory']
-PENDING_UPLOAD_FOLDER = APP_CONFIG['UPLOADS']['pending_directory']
+UPLOADS_DIRECTORY = APP_CONFIG['DATA_FILES']['upload_directory']
+ALLOWED_UPLOAD_EXTENSIONS = APP_CONFIG['DATA_FILES']['allowed_extensions']
 
+DISCOVERY_DIRECTORY = os.path.realpath(APP_CONFIG['DATA_FILES']['discovery_directory'])
+PENDING_DIRECTORY = os.path.realpath(f"{UPLOADS_DIRECTORY}/pending/")
+PROCESSED_DIRECTORY = os.path.realpath(f"{UPLOADS_DIRECTORY}/processed/")
+REMOVE_STALES_EVERY = APP_CONFIG['DATA_FILES']['remove_stales_every']  # in seconds
 
 utc_offsets = sorted(
     list(range(-12, 15)) +  # regular offsets
@@ -56,11 +80,39 @@ TIMEZONES = dict(
 TIMEZONES_R = {str(float(v)): k for k, v in TIMEZONES.items()}
 
 
+def update_and_append_to_checkins(checkins, value):
+    upload_id, timestamp = value
+    # remove valid checkins with same upload_id as the new value
+    checkins = [(uid, ts) for uid, ts in get_valid_checkins(checkins)
+                if uid != upload_id]
+    checkins.append(value)  # append the new value
+    return checkins
+
+
+def get_valid_checkins(checkins):
+    # return checkins that haven't yet expired
+    now = dt.datetime.now().timestamp()
+    checkins = [a for a in checkins if (now - a[1]) < REMOVE_STALES_EVERY]
+    return checkins
+
+
+def remove_stale_files(valid_uids):
+    temp_files = [f for f in os.listdir(PENDING_DIRECTORY)
+                  if (os.path.isfile(f"{PENDING_DIRECTORY}/{f}") and
+                      f.startswith('.temp'))]
+    to_remove = [f"{PENDING_DIRECTORY}/{f}" for f in temp_files
+                 if '.'.join(f[6:].split('.')[:2]) not in valid_uids]
+    for f in to_remove:
+        if os.path.isfile(f):
+            os.remove(f)
+
+
 def current_timestamp():
     return int(round(dt.datetime.now().timestamp()))
 
 
 def allowed_upload(file):
+    # TODO: Implement this using regular expression
     return '.' in file and file.lower().split('.')[-1] in ALLOWED_UPLOAD_EXTENSIONS
 
 
@@ -95,16 +147,16 @@ def save_fileobj(file_obj, path):
 
 def move_pending_files(session):
     identity = session['identity']
-    for f in os.listdir(PENDING_UPLOAD_FOLDER):
+    for f in os.listdir(PENDING_DIRECTORY):
         if f.startswith(identity):
             shutil.move(
-                os.path.join(PENDING_UPLOAD_FOLDER, f),
-                os.path.join(UPLOAD_FOLDER, f[17:])
+                os.path.join(PENDING_DIRECTORY, f),
+                os.path.join(PROCESSED_DIRECTORY, f[17:])
             )
 
 
-def parse_dfiles(dfiles: str) -> List[str]:
-    log.debug(dfiles)
+# def parse_dfiles(dfiles: str) -> List[str]:
+#     log.debug(dfiles)
 
 
 def fileobj_to_jpgbytes(file_obj):

@@ -1,9 +1,10 @@
-<form class="row g-3" method="POST" action="{{ url_for('file.delete', fid=data['file']['id']) }}">
+<form class="row g-3" method="POST" action="{{ url_for('file.delete') }}">
   <div class="col-md-12">
-    <p>Are you sure you want to delete this file?</p>
+    <p>Are you sure you want to delete the selected file(s)?</p>
   </div>
-  <div class="col-md-7">
-  </div>
+  <input id="delete_uploads_id" name="uploads_id" type="hidden"  value="{{ data['uploads_id'] }}">
+  <input id="delete_ftype" name="ftype" type="hidden"  value="">
+  <input id="delete_indexes" name="indexes" type="hidden"  value="">
   <div class="col-md-3">
     <button type="submit" class="btn btn-danger">Continue</button>
   </div>

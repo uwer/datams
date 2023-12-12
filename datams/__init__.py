@@ -1,7 +1,5 @@
 import os
 import sys
-import logging
-
 
 from datams.flask import flask_init_app
 from datams.celery import celery_init_app
@@ -11,11 +9,6 @@ from datams.db import database_init_app
 
 # add this package to path to allow absolute imports
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
-
-# basic logging initialization
-logging.basicConfig()
-log = logging.getLogger()
-log.setLevel(logging.DEBUG)
 
 
 def create_app(test_config=None):

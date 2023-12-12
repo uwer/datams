@@ -1,0 +1,38 @@
+{% set title = (data['deployment']['location'] + " " + data['deployment']['date']|string, None, data['deployment']['organizations']) %}
+{% set button = {'id': 'deploymentEditButton', 'class': 'btn btn-warning btn-md', 'label': 'EDIT DEPLOYMENT', 'target': url_for('deployment.edit', did=data['deployment']['id']), 'modal_target': False} %}
+
+{% extends "main.html" %}
+
+{% block title %}
+    {{ title[0] }} Details
+{% endblock %}
+
+{% block content %}
+    <div style="padding: 0px 5px 0px 5px; display: flex; flex-flow: column; background-color: rgb(235,235,235); float:left; height: 100%; width: 16%; border: 1px solid black;">
+      <h2>Contacts</h2>
+      <div style="flex-grow: 1; overflow-y: auto;">
+      {{ components.contactcards(data['contacts'], 2) }}
+      </div>
+    </div>
+    <div style="padding: 0px 5px 0px 5px; display: inline; background-color: rgb(235,235,235); float:left; height: 100%; width: 84%;">
+      <div>
+        <h2>Moorings</h2>
+        <div id="mooringMap" style="width: 50%; height: 500px; float:left;"></div>
+        <div style="float: left; width: 50%;">
+          {{ components.accordian('mfilesAccordian', data['mfiles']) }}
+        </div>
+      </div>
+    </div>
+    <div style="padding: 0px 5px 0px 5px; background-color: rgb(235,235,235); width: 100%; border: 1px solid black;">
+      <h2>Documents</h2>
+      <div>
+      {{ components.table('dfilesTable', data['dfiles']) }}
+      </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    {{ scripts.format_map('mooringMap', data['map_center'], data['map_zoom'], data['moorings']) }}
+    {{ scripts.format_table('dfilesTable') }}
+    {{ scripts.format_accordian('mfilesAccordian', data['mfiles']) }}
+{% endblock %}
