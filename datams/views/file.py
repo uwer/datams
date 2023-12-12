@@ -82,6 +82,7 @@ def checkin():
     return make_response(("Successful check-in", 200))
 
 
+
 @bp.route('/submit', methods=('POST',))
 @login_required
 def submit():

@@ -27,9 +27,18 @@ def expand_environmental_variables(d):
         return d
 
 
+DATAMS_CONFIG = "DATAMS_CONFIG"
+
 rootdir = os.path.dirname(os.path.realpath(__file__))
-with open(os.path.join(rootdir, "config.yml"), "r") as conf_file:
-    config = yaml.safe_load(conf_file)
+
+conf_file = os.getenv(DATAMS_CONFIG,os.path.join(rootdir, "config.yml"))
+
+# with open(conf_file, "r") as conf_fp:
+#     config = yaml.safe_load(conf_fp)
+# with open(os.path.join(rootdir, "config.yml"), "r") as conf_fp:
+
+with open(conf_file, "r") as conf_fp:
+    config = yaml.safe_load(conf_fp)
     config = expand_environmental_variables(config)
 
 # TODO: Enforce these for certain things such as deployment, mooring, organization, user
