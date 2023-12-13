@@ -17,3 +17,4 @@ sqlparse==0.4.4
 tqdm==4.66.1
 werkzeug==3.0.1
 tzdata==2023.3
+prometheus-client
