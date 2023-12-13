@@ -32,7 +32,7 @@ services:
     networks:
       - datams
       
-  worker:
+  workers:
     image: datams/ubuntu:22.04
     command:
        - "/app/run_celery.sh"
